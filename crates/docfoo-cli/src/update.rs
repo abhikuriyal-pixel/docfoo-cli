@@ -2,7 +2,7 @@
 //!
 //! The repository is `DOCFOO_REPO` (default `abhikuriyal-pixel/docfoo-cli`),
 //! and `DOCFOO_UPDATE_API_URL` can point the check at a mock. A release ships
-//! `docfoo-<version>-<platform>.tar.gz` (Linux) or `.zip` (Windows) plus a
+//! `docfoo-cli-<version>-<platform>.tar.gz` (Linux) or `.zip` (Windows) plus a
 //! `.sha256` sidecar; self-update verifies the checksum before replacing the
 //! `docfoo` and `docfoo-agent` binaries next to the running executable.
 
@@ -79,7 +79,7 @@ fn user_agent() -> String {
 pub fn parse_release(body: &Value) -> Option<ReleaseInfo> {
     let tag = body.get("tag_name")?.as_str()?.to_string();
     let version = tag.trim_start_matches('v').to_string();
-    let wanted = format!("docfoo-{version}-{}{}", platform_tag(), archive_suffix());
+    let wanted = format!("docfoo-cli-{version}-{}{}", platform_tag(), archive_suffix());
     let assets = body.get("assets")?.as_array()?;
     let asset = assets
         .iter()
@@ -312,7 +312,7 @@ mod tests {
 
     #[test]
     fn parses_the_platform_asset_and_checksum() {
-        let name = format!("docfoo-0.2.0-{}{}", platform_tag(), archive_suffix());
+        let name = format!("docfoo-cli-0.2.0-{}{}", platform_tag(), archive_suffix());
         let release = parse_release(&release_body("v0.2.0", &name)).unwrap();
         assert_eq!(release.tag, "v0.2.0");
         assert_eq!(release.version, "0.2.0");
@@ -323,7 +323,7 @@ mod tests {
 
     #[test]
     fn ignores_releases_without_a_platform_asset() {
-        assert!(parse_release(&release_body("v0.2.0", "docfoo-0.2.0-solaris.tgz")).is_none());
+        assert!(parse_release(&release_body("v0.2.0", "docfoo-cli-0.2.0-solaris.tgz")).is_none());
     }
 
     #[test]

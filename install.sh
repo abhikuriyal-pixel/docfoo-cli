@@ -56,7 +56,7 @@ else
   else
     TAG="${VERSION#v}"
   fi
-  ASSET="docfoo-${TAG}-linux-x64.tar.gz"
+  ASSET="docfoo-cli-${TAG}-linux-x64.tar.gz"
   URL="https://github.com/$REPO/releases/download/v${TAG}/${ASSET}"
   echo "downloading $URL"
   curl -fsSL -o "$TMP/$ASSET" "$URL"
@@ -66,8 +66,8 @@ else
     echo "warning: no .sha256 asset — skipping checksum verification" >&2
   fi
   tar -xzf "$TMP/$ASSET" -C "$TMP"
-  install -m 0755 "$TMP/docfoo-${TAG}-linux-x64/docfoo" "$PREFIX/docfoo"
-  install -m 0755 "$TMP/docfoo-${TAG}-linux-x64/docfoo-agent" "$PREFIX/docfoo-agent"
+  install -m 0755 "$TMP/docfoo-cli-${TAG}-linux-x64/docfoo" "$PREFIX/docfoo"
+  install -m 0755 "$TMP/docfoo-cli-${TAG}-linux-x64/docfoo-agent" "$PREFIX/docfoo-agent"
 fi
 
 echo "installed: $PREFIX/docfoo"

@@ -328,6 +328,16 @@ enum Transport {
     Socket(Mutex<std::os::unix::net::UnixStream>),
 }
 
+impl Transport {
+    fn child(&self) -> Option<&Mutex<Child>> {
+        match self {
+            Transport::Child { child, .. } => Some(child),
+            #[cfg(unix)]
+            Transport::Socket(_) => None,
+        }
+    }
+}
+
 /// Read protocol frames until EOF, then fail every waiter.
 fn start_reader<R: std::io::Read + Send + 'static>(
     reader: R,
@@ -630,7 +640,7 @@ impl SidecarClient {
 impl Drop for SidecarClient {
     fn drop(&mut self) {
         // A socket connection belongs to a daemon: close it without killing.
-        if let Transport::Child { child, .. } = &self.transport {
+        if let Some(child) = self.transport.child() {
             if let Ok(mut child) = child.lock() {
                 let _ = child.kill();
                 let _ = child.wait();
@@ -663,6 +673,8 @@ fn next_request_id() -> String {
 pub struct Sidecar {
     launch: SidecarLaunch,
     agent_dir: PathBuf,
+    /// Socket for a persistent daemon; unused on Windows (spawn only).
+    #[cfg_attr(not(unix), allow(dead_code))]
     socket: Option<PathBuf>,
     client: Option<Arc<SidecarClient>>,
     spawns: u32,

@@ -14,7 +14,7 @@ if (-not (Test-Path node_modules)) { bun install }
 ./build.ps1 docfoo-agent.exe
 Pop-Location
 
-$name = "docfoo-$version-windows-x64"
+$name = "docfoo-cli-$version-windows-x64"
 $dist = "dist/$name"
 Remove-Item -Recurse -Force $dist -ErrorAction SilentlyContinue
 New-Item -ItemType Directory -Path $dist | Out-Null

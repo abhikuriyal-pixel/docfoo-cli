@@ -17,7 +17,7 @@ cargo build --release
 ( cd sidecar && { [ -d node_modules ] || bun install; } \
   && DOCFOO_SIDECAR_TARGET="${DOCFOO_SIDECAR_TARGET:-bun-linux-x64}" ./build.sh docfoo-agent )
 
-NAME="docfoo-${VERSION}-${OS_TAG}"
+NAME="docfoo-cli-${VERSION}-${OS_TAG}"
 DIST="dist/${NAME}"
 rm -rf "$DIST"
 mkdir -p "$DIST"
