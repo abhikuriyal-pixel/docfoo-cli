@@ -1,4 +1,5 @@
 /target
+.agent/
 node_modules/
 sidecar/node_modules/
 sidecar/docfoo-agent

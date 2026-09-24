@@ -2,15 +2,17 @@
 
 Barebones, scriptable DocFoo for the shell and for agents (Hermes/Slack).
 
-> **Status:** All stages complete (1–6). 127 tests green, clippy clean. See
-> `PLAN.md` for the architecture and `docs/HERMES.md` for the Slack
-> integration.
+> **Status:** All stages complete (1-6), 133 tests green, clippy clean. See
+> `PLAN.md` for the architecture and `docs/HERMES.md` for the Hermes/Slack
+> integration (plugin, `dofoq` trigger routing, rich Slack rendering,
+> persistent sidecar, custom providers).
 
 ## Build
 
 ```bash
-cargo build
-./target/debug/docfoo version
+cargo build                   # debug: target/debug/docfoo
+cargo build --release         # release: target/release/docfoo
+./scripts/acceptance.sh       # offline build + test + smoke checks
 ```
 
 The model sidecar (`docfoo-agent`) is a Bun-compiled completion service built
@@ -30,17 +32,26 @@ export DOCFOO_SIDECAR_BIN=/path/to/sidecar/docfoo-agent   # explicit binary
 export DOCFOO_SIDECAR_TS=/path/to/sidecar/main.ts         # run with bun
 ```
 
+On Linux/WSL the sidecar can run as a persistent systemd user service
+(`scripts/docfoo-sidecar.service`); the CLI then connects to
+`<workspace>/.agent/sidecar.sock` instead of spawning a process per command.
+Scan support provisions its native deps once with `docfoo setup`
+(optionally `--from /path/to/DocFoo/models`).
+
 ## Usage (current)
 
 ```bash
 docfoo version [--verbose] [--json]
-docfoo model --list [--provider PROVIDER] [--json]
+docfoo model --list [--provider PROVIDER] [--refresh] [--json]
 docfoo model --get [SLOT]                 # SLOT: chat | scan | scan-analysis | kg
 docfoo model --set SLOT provider/model
 docfoo auth --status [--provider PROVIDER] [--json]
 docfoo auth --set PROVIDER [--key KEY]    # prompts on a TTY when --key is omitted
 docfoo auth --logout PROVIDER
 ```
+
+`model --refresh` re-fetches Pi's model catalogs over the network before
+listing (useful once the sidecar daemon has been running for a while).
 
 ### Knowledge graph
 
@@ -60,9 +71,10 @@ docfoo kg --query "How are the National Education Policy 2020 and the NCF connec
 # Machine-readable envelope (answer + citations + figures + sources)
 docfoo kg --query "What is axial cross-attention?" --scope single_column_test --json
 
-# Slack-ready output: figures become MEDIA: lines, Sources section appended,
-# optional [[hermes:final]] sentinel for a patched Hermes to relay verbatim
-docfoo kg --query "..." --format slack --hermes-final [--plain-tables] [--quote-sources]
+# Slack-ready output: `$…$` math -> Unicode, [doc.md:75-89] citations ->
+# inline-code chips, figures -> MEDIA: lines; compact Sources unless
+# --no-sources; --hermes-final adds the [[hermes:final]] sentinel
+docfoo kg --query "..." --format slack --hermes-final [--no-sources] [--plain-tables]
 
 # Persist the turn to an app-compatible kg-chats/ entry
 docfoo kg --query "..." --save
@@ -188,6 +200,10 @@ Human mode writes errors to stderr. Exit codes: `0` success, `1` runtime error,
 # Linux/WSL: install the latest release into ~/.local/bin
 ./install.sh                 # or --local to build from this checkout
 
+# Windows: build from source and keep the pair together
+cargo build --release
+cd sidecar && ./build.ps1    # produces docfoo-agent.exe next to docfoo.exe
+
 # Check for or install a newer release
 docfoo update --check
 docfoo update
@@ -200,6 +216,17 @@ Release artifacts are `docfoo-<version>-linux-x64.tar.gz` and
 `docfoo-<version>-windows-x64.zip` plus `.sha256` sidecars; `scripts/release.sh`
 and `scripts/release.ps1` build them locally. Set `DOCFOO_REPO` to your GitHub
 `owner/repo` before releasing.
+
+## Providers and models
+
+Model slots live in `<workspace>/model-selection.json` and are shared with the
+desktop app. Credentials go through Pi (`<workspace>/.agent/auth.json`, or
+`docfoo auth --set PROVIDER --key KEY`); custom OpenAI-compatible providers
+can be declared in `<workspace>/.agent/models.json` with an environment key
+(`"apiKey": "$MY_API_KEY"`). The sidecar also bundles provider extensions
+(InferX ships this way). On Linux/WSL the systemd sidecar reads key overrides
+from `~/.config/systemd/user/docfoo-sidecar.env`. See `docs/HERMES.md`
+("Custom providers") for a worked example.
 
 ## Hermes (Slack)
 
