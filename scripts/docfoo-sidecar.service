@@ -1,0 +1,16 @@
+[Unit]
+Description=DocFoo model sidecar (persistent, socket mode)
+Documentation=https://github.com/docfoo/docfoo-cli
+After=network-online.target
+
+[Service]
+Type=simple
+# The workspace's .agent dir holds auth.json/models.json/models-store.json.
+# Change this if your workspace is not ~/.docfoo.
+Environment=DOCFOO_AGENT_DIR=%h/.docfoo/.agent
+ExecStart=%h/.local/bin/docfoo-agent --socket %h/.docfoo/.agent/sidecar.sock
+Restart=on-failure
+RestartSec=2
+
+[Install]
+WantedBy=default.target

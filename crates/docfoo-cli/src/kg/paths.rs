@@ -11,7 +11,16 @@ use crate::workspace::Workspace;
 /// Normalize a `--scope` value and reject anything that escapes `resources/`.
 pub fn normalize_scope(scope: &str) -> Result<String> {
     let raw = scope.trim();
-    if raw.starts_with('/') || raw.starts_with('\\') {
+    // Backslashes are path separators to `graph_path` (`replace('\\', "/")`),
+    // so a scope like `papers\..\..` would escape on Unix where `Path` does
+    // not treat `\` as a separator. Colons cover Windows drive paths
+    // (`C:\evil`, `C:evil`), which are absolute/drive-relative on Windows and
+    // harmless folder names elsewhere — reject both on every platform.
+    if raw.starts_with('/')
+        || raw.starts_with('\\')
+        || raw.contains('\\')
+        || raw.contains(':')
+    {
         return Err(CliError::Usage(format!("invalid resource scope \"{scope}\"")));
     }
     let dir = raw.trim_end_matches('/').to_string();
@@ -102,6 +111,8 @@ mod tests {
         assert!(normalize_scope("..").is_err());
         assert!(normalize_scope("papers/../..").is_err());
         assert!(normalize_scope("C:\\evil").is_err());
+        assert!(normalize_scope("C:evil").is_err());
+        assert!(normalize_scope("papers\\..\\..").is_err());
     }
 
     #[test]

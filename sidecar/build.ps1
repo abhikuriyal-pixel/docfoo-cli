@@ -13,7 +13,7 @@ if (-not (Test-Path node_modules)) {
 }
 node scripts/dedupe-pi-ai.mjs
 
-$args = @("build", "--compile", "./main.ts", "--outfile", $Out)
+$args = @("build", "--compile", "--minify", "--bytecode", "./main.ts", "--outfile", $Out)
 if ($env:DOCFOO_SIDECAR_TARGET) {
     $args += @("--target", $env:DOCFOO_SIDECAR_TARGET)
 }

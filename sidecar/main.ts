@@ -2,12 +2,16 @@
  * DocFoo CLI model-completion sidecar.
  *
  * A stripped Pi runtime exposed over JSONL: no agent loop, no sessions, no
- * tools. The Rust CLI writes one request per line on stdin; this process
- * answers with tagged frames on stdout (see PLAN.md §3.4).
+ * tools. Two transports:
+ *
+ *   - stdio (default): one request per line on stdin, tagged frames on stdout
+ *   - `--socket PATH`: the same frames over a Unix domain socket, so a
+ *     long-lived daemon skips process start and keeps provider connections warm
  *
  * Environment:
  *   DOCFOO_AGENT_DIR   Pi config dir (auth.json, models.json, models-store.json)
  */
+import { unlinkSync } from "node:fs";
 import { join } from "node:path";
 import { createInterface } from "node:readline";
 import { ModelRuntime } from "@earendil-works/pi-coding-agent";
@@ -16,12 +20,32 @@ import { ProviderService } from "./providers.js";
 
 const AGENT_DIR = process.env.DOCFOO_AGENT_DIR || join(process.cwd(), ".agent");
 
+/** Anything that can receive one protocol line. */
+interface Target {
+  write(chunk: string): unknown;
+}
+
 /** Serialized stdout writer so concurrent handlers never interleave a line. */
 let outputTail = Promise.resolve();
+/** Where frames without a requestId (ready/fatal) go; null in socket mode. */
+let fallbackTarget: Target | null = null;
+/** requestId -> connection that owns it, so socket mode can serve several callers. */
+const owners = new Map<string, Target>();
+
 export function emit(value: unknown): void {
+  const frame = value as { requestId?: unknown };
+  const requestId = typeof frame.requestId === "string" ? frame.requestId : "";
+  const target = (requestId ? owners.get(requestId) : undefined) ?? fallbackTarget;
+  if (!target) return; // no sink, or the owning connection already closed
   const line = JSON.stringify(value) + "\n";
   outputTail = outputTail
-    .then(() => new Promise<void>((done) => process.stdout.write(line, () => done())))
+    .then(
+      () =>
+        new Promise<void>((done) => {
+          target.write(line);
+          done();
+        }),
+    )
     .catch(() => {});
 }
 
@@ -35,6 +59,21 @@ export function errorText(error: unknown): string {
     current = (current as { cause?: unknown }).cause;
   }
   return parts.join(" — ") || String(error);
+}
+
+function argValue(name: string): string | undefined {
+  const index = process.argv.indexOf(name);
+  return index >= 0 ? process.argv[index + 1] : undefined;
+}
+
+function parseRequest(line: string): Record<string, unknown> | null {
+  const trimmed = line.trim();
+  if (!trimmed) return null;
+  try {
+    return JSON.parse(trimmed) as Record<string, unknown>;
+  } catch {
+    return null; // malformed frames are ignored
+  }
 }
 
 async function main(): Promise<void> {
@@ -51,23 +90,7 @@ async function main(): Promise<void> {
   const complete = new CompleteService(runtime, emit);
   const providers = new ProviderService(runtime, emit);
 
-  emit({ type: "ready", version: "0.1.0" });
-
-  const lines = createInterface({ input: process.stdin, terminal: false });
-  lines.on("line", (line) => {
-    void handleLine(line);
-  });
-  lines.on("close", () => process.exit(0));
-
-  async function handleLine(line: string): Promise<void> {
-    const trimmed = line.trim();
-    if (!trimmed) return;
-    let request: Record<string, unknown>;
-    try {
-      request = JSON.parse(trimmed) as Record<string, unknown>;
-    } catch {
-      return; // malformed frames are ignored
-    }
+  async function handle(request: Record<string, unknown>): Promise<void> {
     const requestId = typeof request.requestId === "string" ? request.requestId : "";
     try {
       switch (request.type) {
@@ -107,6 +130,56 @@ async function main(): Promise<void> {
       emit({ type: "error_response", requestId, success: false, error: errorText(error) });
     }
   }
+
+  function dispatch(socket: Target | null, line: string): void {
+    const request = parseRequest(line);
+    if (!request) return;
+    const requestId = typeof request.requestId === "string" ? request.requestId : "";
+    if (socket && requestId) owners.set(requestId, socket);
+    void handle(request).finally(() => {
+      if (requestId) owners.delete(requestId);
+    });
+  }
+
+  const socketPath = argValue("--socket");
+  if (socketPath) {
+    try {
+      unlinkSync(socketPath); // drop a stale socket from a previous run
+    } catch {
+      /* no stale file */
+    }
+    const buffers = new WeakMap<object, string>();
+    Bun.listen({
+      unix: socketPath,
+      socket: {
+        open(ws) {
+          buffers.set(ws, "");
+        },
+        data(ws, data) {
+          const text = (buffers.get(ws) ?? "") + data.toString();
+          const lines = text.split("\n");
+          buffers.set(ws, lines.pop() ?? "");
+          for (const line of lines) dispatch(ws as unknown as Target, line);
+        },
+        close(ws) {
+          buffers.delete(ws);
+          for (const [id, target] of owners) {
+            if (target === (ws as unknown as Target)) owners.delete(id);
+          }
+        },
+        drain() {},
+      },
+    });
+    process.stderr.write(`docfoo-agent listening on ${socketPath}\n`);
+    return;
+  }
+
+  fallbackTarget = process.stdout;
+  emit({ type: "ready", version: "0.1.0" });
+
+  const lines = createInterface({ input: process.stdin, terminal: false });
+  lines.on("line", (line) => dispatch(null, line));
+  lines.on("close", () => process.exit(0));
 }
 
 main().catch((error) => {

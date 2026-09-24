@@ -143,7 +143,7 @@ mkdir -p ~/.cache/docfoo-sidecar
   | (cd ~/.cache/docfoo-sidecar && tar -xf -)
 cd ~/.cache/docfoo-sidecar && rm -rf node_modules
 ~/.local/bin/bun install
-~/.local/bin/bun build --compile ./main.ts --outfile docfoo-agent
+~/.local/bin/bun build --compile --minify --bytecode ./main.ts --outfile docfoo-agent
 install -m 755 docfoo-agent ~/.local/bin/docfoo-agent
 
 # 3. Credentials (stored in Pi's auth.json; no env var needed at query time)
@@ -153,6 +153,21 @@ install -m 755 docfoo-agent ~/.local/bin/docfoo-agent
 The CLI finds `docfoo-agent` next to itself. `scripts/release.sh` builds the
 same pair plus a tarball when run on a Linux host (it forces the Linux sidecar
 target).
+
+```bash
+# 4. Persistent sidecar (optional, saves ~0.5s + TLS setup per command)
+#    The CLI auto-detects <workspace>/.agent/sidecar.sock and falls back to
+#    spawning a process when the service is not running.
+mkdir -p ~/.config/systemd/user
+cp scripts/docfoo-sidecar.service ~/.config/systemd/user/
+systemctl --user daemon-reload
+systemctl --user enable --now docfoo-sidecar
+# after updating the sidecar binary:
+#   systemctl --user restart docfoo-sidecar
+```
+
+Override the socket with `DOCFOO_SIDECAR_SOCKET`; default is
+`<workspace>/.agent/sidecar.sock` (`WS/.agent/sidecar.sock`).
 
 ### Manual fallback (no plugin system)
 

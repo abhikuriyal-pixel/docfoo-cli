@@ -313,10 +313,58 @@ fn find_on_path(name: &str) -> Option<PathBuf> {
 }
 
 pub struct SidecarClient {
-    child: Mutex<Child>,
-    stdin: Mutex<ChildStdin>,
+    transport: Transport,
     pending: Arc<PendingMap>,
     alive: Arc<AtomicBool>,
+}
+
+enum Transport {
+    Child {
+        child: Mutex<Child>,
+        stdin: Mutex<ChildStdin>,
+    },
+    /// Connection to a long-lived `docfoo-agent --socket` daemon.
+    #[cfg(unix)]
+    Socket(Mutex<std::os::unix::net::UnixStream>),
+}
+
+/// Read protocol frames until EOF, then fail every waiter.
+fn start_reader<R: std::io::Read + Send + 'static>(
+    reader: R,
+    pending: Arc<PendingMap>,
+    alive: Arc<AtomicBool>,
+) {
+    thread::spawn(move || {
+        let reader = BufReader::new(reader);
+        for line in reader.lines() {
+            match line {
+                Ok(line) if line.trim().is_empty() => continue,
+                Ok(line) => match serde_json::from_str::<Value>(&line) {
+                    Ok(value) => {
+                        pending.route(&value);
+                    }
+                    Err(_) => { /* malformed frames are ignored */ }
+                },
+                Err(_) => break,
+            }
+        }
+        alive.store(false, Ordering::SeqCst);
+        pending.fail_all("the sidecar stopped before answering");
+    });
+}
+
+/// Default socket for a per-workspace `docfoo-agent --socket` daemon.
+#[cfg(unix)]
+fn socket_path(agent_dir: &Path) -> Option<PathBuf> {
+    if let Some(value) = std::env::var_os("DOCFOO_SIDECAR_SOCKET").filter(|value| !value.is_empty()) {
+        return Some(PathBuf::from(value));
+    }
+    Some(agent_dir.join("sidecar.sock"))
+}
+
+#[cfg(not(unix))]
+fn socket_path(_agent_dir: &Path) -> Option<PathBuf> {
+    None
 }
 
 impl SidecarClient {
@@ -354,29 +402,37 @@ impl SidecarClient {
 
         let pending = Arc::new(PendingMap::default());
         let alive = Arc::new(AtomicBool::new(true));
-        let reader_pending = Arc::clone(&pending);
-        let reader_alive = Arc::clone(&alive);
-        thread::spawn(move || {
-            let reader = BufReader::new(stdout);
-            for line in reader.lines() {
-                match line {
-                    Ok(line) if line.trim().is_empty() => continue,
-                    Ok(line) => match serde_json::from_str::<Value>(&line) {
-                        Ok(value) => {
-                            reader_pending.route(&value);
-                        }
-                        Err(_) => { /* malformed frames are ignored */ }
-                    },
-                    Err(_) => break,
-                }
-            }
-            reader_alive.store(false, Ordering::SeqCst);
-            reader_pending.fail_all("the sidecar stopped before answering");
-        });
+        start_reader(stdout, Arc::clone(&pending), Arc::clone(&alive));
 
         Ok(Self {
-            child: Mutex::new(child),
-            stdin: Mutex::new(stdin),
+            transport: Transport::Child {
+                child: Mutex::new(child),
+                stdin: Mutex::new(stdin),
+            },
+            pending,
+            alive,
+        })
+    }
+
+    /// Connect to a long-lived sidecar daemon over a Unix socket.
+    #[cfg(unix)]
+    pub fn connect_socket(path: &Path) -> Result<Self> {
+        use std::os::unix::net::UnixStream;
+
+        let stream = UnixStream::connect(path).map_err(|error| {
+            SidecarError::Spawn(format!(
+                "could not connect to the sidecar socket {}: {error}",
+                path.display()
+            ))
+        })?;
+        let reader = stream.try_clone().map_err(|error| {
+            SidecarError::Spawn(format!("could not duplicate the sidecar socket: {error}"))
+        })?;
+        let pending = Arc::new(PendingMap::default());
+        let alive = Arc::new(AtomicBool::new(true));
+        start_reader(reader, Arc::clone(&pending), Arc::clone(&alive));
+        Ok(Self {
+            transport: Transport::Socket(Mutex::new(stream)),
             pending,
             alive,
         })
@@ -386,9 +442,13 @@ impl SidecarClient {
         if !self.alive.load(Ordering::SeqCst) {
             return false;
         }
-        match self.child.lock() {
-            Ok(mut child) => matches!(child.try_wait(), Ok(None)),
-            Err(_) => false,
+        match &self.transport {
+            Transport::Child { child, .. } => match child.lock() {
+                Ok(mut child) => matches!(child.try_wait(), Ok(None)),
+                Err(_) => false,
+            },
+            #[cfg(unix)]
+            Transport::Socket(_) => true,
         }
     }
 
@@ -396,16 +456,31 @@ impl SidecarClient {
         let mut line = serde_json::to_string(value)
             .map_err(|error| SidecarError::Transport(error.to_string()))?;
         line.push('\n');
-        let mut stdin = self
-            .stdin
-            .lock()
-            .map_err(|_| SidecarError::Transport("the sidecar pipe is poisoned".to_string()))?;
-        stdin
-            .write_all(line.as_bytes())
-            .map_err(|error| SidecarError::Transport(format!("could not write to the sidecar: {error}")))?;
-        stdin
-            .flush()
-            .map_err(|error| SidecarError::Transport(format!("could not flush the sidecar pipe: {error}")))
+        match &self.transport {
+            Transport::Child { stdin, .. } => {
+                let mut stdin = stdin.lock().map_err(|_| {
+                    SidecarError::Transport("the sidecar pipe is poisoned".to_string())
+                })?;
+                stdin.write_all(line.as_bytes()).map_err(|error| {
+                    SidecarError::Transport(format!("could not write to the sidecar: {error}"))
+                })?;
+                stdin.flush().map_err(|error| {
+                    SidecarError::Transport(format!("could not flush the sidecar pipe: {error}"))
+                })
+            }
+            #[cfg(unix)]
+            Transport::Socket(stream) => {
+                let mut stream = stream.lock().map_err(|_| {
+                    SidecarError::Transport("the sidecar socket is poisoned".to_string())
+                })?;
+                stream.write_all(line.as_bytes()).map_err(|error| {
+                    SidecarError::Transport(format!("could not write to the sidecar socket: {error}"))
+                })?;
+                stream.flush().map_err(|error| {
+                    SidecarError::Transport(format!("could not flush the sidecar socket: {error}"))
+                })
+            }
+        }
     }
 
     fn request(
@@ -550,9 +625,12 @@ impl SidecarClient {
 
 impl Drop for SidecarClient {
     fn drop(&mut self) {
-        if let Ok(mut child) = self.child.lock() {
-            let _ = child.kill();
-            let _ = child.wait();
+        // A socket connection belongs to a daemon: close it without killing.
+        if let Transport::Child { child, .. } = &self.transport {
+            if let Ok(mut child) = child.lock() {
+                let _ = child.kill();
+                let _ = child.wait();
+            }
         }
     }
 }
@@ -581,6 +659,7 @@ fn next_request_id() -> String {
 pub struct Sidecar {
     launch: SidecarLaunch,
     agent_dir: PathBuf,
+    socket: Option<PathBuf>,
     client: Option<Arc<SidecarClient>>,
     spawns: u32,
 }
@@ -590,19 +669,30 @@ impl Sidecar {
         Ok(Self {
             launch: SidecarLaunch::discover()?,
             agent_dir: workspace.agent_dir.clone(),
+            socket: socket_path(&workspace.agent_dir),
             client: None,
             spawns: 0,
         })
     }
 
-    /// The live client, spawning (or respawning after a crash) on demand.
-    /// The returned `Arc` is safe to share with worker threads.
+    /// The live client: a running daemon's socket when available, otherwise a
+    /// freshly spawned process (respawning after a crash on demand). The
+    /// returned `Arc` is safe to share with worker threads.
     pub fn client(&mut self) -> Result<Arc<SidecarClient>> {
-        let needs_spawn = self
+        let needs_client = self
             .client
             .as_ref()
             .map_or(true, |client| !client.is_alive());
-        if needs_spawn {
+        if needs_client {
+            #[cfg(unix)]
+            if let Some(path) = self.socket.clone() {
+                if let Ok(client) = SidecarClient::connect_socket(&path) {
+                    self.client = Some(Arc::new(client));
+                    return Ok(Arc::clone(
+                        self.client.as_ref().expect("sidecar client was set"),
+                    ));
+                }
+            }
             if self.spawns >= MAX_SPAWNS {
                 return Err(CliError::Message(
                     "the model sidecar keeps stopping — check `docfoo version --verbose`"

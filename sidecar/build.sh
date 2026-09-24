@@ -13,7 +13,7 @@ fi
 node scripts/dedupe-pi-ai.mjs || true
 
 OUT="${1:-docfoo-agent}"
-ARGS=(build --compile ./main.ts --outfile "$OUT")
+ARGS=(build --compile --minify --bytecode ./main.ts --outfile "$OUT")
 if [ -n "${DOCFOO_SIDECAR_TARGET:-}" ]; then
   ARGS+=(--target "$DOCFOO_SIDECAR_TARGET")
 fi
