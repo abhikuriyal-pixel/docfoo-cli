@@ -76,7 +76,7 @@ pub fn is_safe_rel(rel: &str) -> bool {
         return false;
     }
     if rel
-        .split(|c| c == '/' || c == '\\')
+        .split(['/', '\\'])
         .any(|component| component.is_empty() || component == "." || component == "..")
     {
         return false;

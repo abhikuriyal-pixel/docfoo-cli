@@ -1,9 +1,11 @@
 # DocFoo CLI — Implementation Plan
 
-> **Status:** Stages 1–4 complete: skeleton, bundled Pi sidecar, `model`/`auth`,
-> `kg --index/--query/--status`, read-only `resources`/`notes`, local
-> `backup`/`restore`, community `collections --download`, and `scan` +
-> `setup`; 120 tests green. Stages 5–6 pending. See §7 for the breakdown.
+> **Status:** All stages complete (1–6): skeleton, bundled Pi sidecar,
+> `model`/`auth`, `kg --index/--query/--status`, read-only `resources`/`notes`,
+> local `backup`/`restore`, community `collections --download`, `scan` +
+> `setup`, packaging/`update`/completions, and the Hermes guide; 127 tests
+> green, clippy clean. See §7 for the breakdown and `docs/HERMES.md` for the
+> Slack integration.
 > **Companion project:** `C:\Users\abhik\Documents\Test\DocFoo` (the Tauri desktop app).
 > **Primary consumer:** Hermes (Slack agent) running in WSL, which invokes `docfoo` commands
 > through its `terminal` tool.
@@ -513,6 +515,8 @@ app's output shape.
 
 ### Stage 5 — Packaging, update, Hermes integration docs
 
+**Status:** 🟢 done
+
 Deliverables:
 
 - `install.sh`: detects Linux x64/WSL; installs `docfoo` + `docfoo-agent` to `~/.local/bin`;
@@ -529,6 +533,8 @@ Acceptance: `curl … | sh` install on WSL; `docfoo update --check` prints the v
 `docs/HERMES.md` instructions are copy-pasteable.
 
 ### Stage 6 — Hardening & acceptance
+
+**Status:** 🟢 done
 
 - Windows build verification (native libs from `DocFoo/models`, `%LOCALAPPDATA%` cache).
 - Error-message pass (missing graph, missing auth, missing native libs, unknown model).

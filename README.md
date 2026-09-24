@@ -2,11 +2,9 @@
 
 Barebones, scriptable DocFoo for the shell and for agents (Hermes/Slack).
 
-> **Status:** Stages 1–5 complete — skeleton, bundled Pi sidecar, `model`/`auth`,
-> `kg`, read-only `resources`/`notes`, `backup`/`restore`, `collections`,
-> `scan` + `setup`, and packaging (`install.sh`, `update`, completions).
-> Stage 6 (hardening and end-to-end acceptance) is pending. See `PLAN.md` and
-> `docs/HERMES.md`.
+> **Status:** All stages complete (1–6). 127 tests green, clippy clean. See
+> `PLAN.md` for the architecture and `docs/HERMES.md` for the Slack
+> integration.
 
 ## Build
 
@@ -212,6 +210,11 @@ into the final Slack answer, and example question → command mappings.
 
 ## Roadmap
 
-See `PLAN.md`. Stage 5 adds packaging (`install.sh`, release tarballs),
-`docfoo update`, and `docs/HERMES.md`; Stage 6 hardens and runs the end-to-end
-acceptance.
+All six plan stages are implemented. `scripts/acceptance.sh` runs the offline
+acceptance checks (build, tests, fresh-workspace smoke tests) and an optional
+live KG query when `DOCFOO_ACCEPTANCE_WORKSPACE` and `DOCFOO_ACCEPTANCE_QUERY`
+are set.
+
+Possible follow-ups (out of v1 scope): `docfoo ask` (multi-step agent mode),
+Koofr cloud backup push/pull, community uploads, OAuth provider logins,
+macOS/arm64 builds.

@@ -17,7 +17,6 @@ use docfoo_kg::tunables::QueryTunables;
 const REQUEST_TIMEOUT: Duration = Duration::from_secs(20);
 
 struct ProviderProfile {
-    id: &'static str,
     env_var: &'static str,
     endpoint: &'static str,
     default_model: &'static str,
@@ -26,19 +25,16 @@ struct ProviderProfile {
 fn profile(provider: &str) -> ProviderProfile {
     match provider.trim().to_lowercase().as_str() {
         "openrouter" => ProviderProfile {
-            id: "openrouter",
             env_var: "OPENROUTER_API_KEY",
             endpoint: "https://openrouter.ai/api/v1/systemone",
             default_model: "typesafe/jev-1.13",
         },
         "typesafe" => ProviderProfile {
-            id: "typesafe",
             env_var: "TYPESAFE_API_KEY",
             endpoint: "https://api.typesafe.ai/v1/systemone",
             default_model: "jev-1.13.0",
         },
         _ => ProviderProfile {
-            id: "opencode",
             env_var: "OPENCODE_API_KEY",
             endpoint: "https://opencode.ai/zen/v1/systemone",
             default_model: "jev-1.13-free",

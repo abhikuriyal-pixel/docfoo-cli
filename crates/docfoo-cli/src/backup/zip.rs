@@ -41,7 +41,7 @@ fn restore_quota_error(kind: QuotaError) -> String {
     }
 }
 
-fn collect_files(root: &Path, dir: &Path, prefix: &str, out: &mut Vec<(String, PathBuf)>) {
+fn collect_files(dir: &Path, prefix: &str, out: &mut Vec<(String, PathBuf)>) {
     let Ok(read) = fs::read_dir(dir) else {
         return;
     };
@@ -57,7 +57,7 @@ fn collect_files(root: &Path, dir: &Path, prefix: &str, out: &mut Vec<(String, P
             format!("{prefix}/{name}")
         };
         if file_type.is_dir() {
-            collect_files(root, &path, &rel, out);
+            collect_files(&path, &rel, out);
         } else if file_type.is_file() {
             out.push((rel, path));
         }
@@ -81,15 +81,15 @@ pub fn create_backup_zip(
     let resources_root = workspace.join("resources");
     let mut files: Vec<(String, PathBuf)> = Vec::new();
     if resources_root.is_dir() {
-        collect_files(&resources_root, &resources_root, "", &mut files);
+        collect_files(&resources_root, "", &mut files);
     }
     let sessions_root = agent_dir.join("sessions");
     if sessions_root.is_dir() {
-        collect_files(&sessions_root, &sessions_root, "sessions", &mut files);
+        collect_files(&sessions_root, "sessions", &mut files);
     }
     let chats_root = workspace.join("chats");
     if chats_root.is_dir() {
-        collect_files(&chats_root, &chats_root, "chats", &mut files);
+        collect_files(&chats_root, "chats", &mut files);
     }
     files.sort_by(|a, b| a.0.cmp(&b.0));
 
@@ -127,7 +127,7 @@ pub fn create_backup_zip(
         "format": BACKUP_FORMAT,
         "version": BACKUP_VERSION,
         "createdAt": now_ms(),
-        "platform": if cfg!(windows) { "desktop" } else { "desktop" },
+        "platform": "desktop",
         "workspace": workspace.to_string_lossy(),
         "resources": stats.resources,
         "notes": stats.notes,

@@ -128,7 +128,7 @@ pub fn run(cli: &Cli, format: OutputFormat, workspace: &Workspace, args: &ScanAr
     let output = scan::run_scan(workspace, request, client, &mut progress)?;
     let rel = output
         .out_dir
-        .strip_prefix(&workspace.resources_dir())
+        .strip_prefix(workspace.resources_dir())
         .map(|path| path.to_string_lossy().replace('\\', "/"))
         .unwrap_or_default();
     let data = json!({

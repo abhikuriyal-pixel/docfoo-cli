@@ -28,13 +28,13 @@ fn request() -> CompletionRequest {
 
 #[test]
 fn ping_round_trip() {
-    let mut client = spawn_with_env(&[]);
+    let client = spawn_with_env(&[]);
     client.ping().expect("ping");
 }
 
 #[test]
 fn complete_returns_text() {
-    let mut client = spawn_with_env(&[]);
+    let client = spawn_with_env(&[]);
     let text = client
         .complete(request(), None, None, Duration::from_secs(10))
         .expect("complete");
@@ -43,7 +43,7 @@ fn complete_returns_text() {
 
 #[test]
 fn complete_streams_deltas() {
-    let mut client = spawn_with_env(&[]);
+    let client = spawn_with_env(&[]);
     let mut request = request();
     request.stream = true;
     let mut deltas = String::new();
@@ -61,7 +61,7 @@ fn complete_streams_deltas() {
 
 #[test]
 fn models_and_auth_status_parse() {
-    let mut client = spawn_with_env(&[]);
+    let client = spawn_with_env(&[]);
     let providers = client.models().expect("models");
     assert_eq!(providers[0].id, "fake-provider");
     assert_eq!(providers[0].models.len(), 2);
@@ -75,14 +75,14 @@ fn models_and_auth_status_parse() {
 
 #[test]
 fn auth_set_and_logout_succeed() {
-    let mut client = spawn_with_env(&[]);
+    let client = spawn_with_env(&[]);
     client.auth_set("fake-provider", "secret-key").expect("auth set");
     client.auth_logout("fake-provider").expect("auth logout");
 }
 
 #[test]
 fn model_failure_surfaces_the_message() {
-    let mut client = spawn_with_env(&[("FAKE_SIDECAR_FAIL", "1")]);
+    let client = spawn_with_env(&[("FAKE_SIDECAR_FAIL", "1")]);
     let error = client
         .complete(request(), None, None, Duration::from_secs(10))
         .unwrap_err();
@@ -92,7 +92,7 @@ fn model_failure_surfaces_the_message() {
 
 #[test]
 fn timeout_is_reported() {
-    let mut client = spawn_with_env(&[("FAKE_SIDECAR_DELAY_MS", "5000")]);
+    let client = spawn_with_env(&[("FAKE_SIDECAR_DELAY_MS", "5000")]);
     let error = client
         .complete(request(), None, None, Duration::from_millis(300))
         .unwrap_err();
@@ -102,7 +102,7 @@ fn timeout_is_reported() {
 
 #[test]
 fn crash_fails_the_request() {
-    let mut client = spawn_with_env(&[("FAKE_SIDECAR_EXIT_AFTER", "1")]);
+    let client = spawn_with_env(&[("FAKE_SIDECAR_EXIT_AFTER", "1")]);
     let error = client
         .complete(request(), None, None, Duration::from_secs(10))
         .unwrap_err();
@@ -112,7 +112,7 @@ fn crash_fails_the_request() {
 #[test]
 fn cancel_flag_stops_a_request() {
     let flag = AtomicBool::new(true);
-    let mut client = spawn_with_env(&[("FAKE_SIDECAR_DELAY_MS", "5000")]);
+    let client = spawn_with_env(&[("FAKE_SIDECAR_DELAY_MS", "5000")]);
     let error = client
         .complete(request(), Some(&flag), None, Duration::from_secs(10))
         .unwrap_err();

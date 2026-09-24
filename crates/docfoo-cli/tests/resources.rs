@@ -195,6 +195,13 @@ fn notes_list_and_read() {
 }
 
 #[test]
+fn list_on_a_fresh_workspace_is_empty() {
+    let temp = tempfile::tempdir().unwrap();
+    let value = run_json(temp.path(), &["resources", "--list"]);
+    assert_eq!(value["data"]["entries"].as_array().unwrap().len(), 0);
+}
+
+#[test]
 fn path_escapes_are_rejected() {
     let temp = tempfile::tempdir().unwrap();
     write_fixture(temp.path());

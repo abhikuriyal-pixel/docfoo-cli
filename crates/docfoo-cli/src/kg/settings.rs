@@ -124,10 +124,14 @@ mod tests {
 
     #[test]
     fn vocab_fingerprint_is_stable_and_order_independent() {
-        let mut a = IndexSettings::default();
-        a.entity_types = vec!["B".into(), "A".into()];
-        let mut b = IndexSettings::default();
-        b.entity_types = vec!["A".into(), "B".into()];
+        let a = IndexSettings {
+            entity_types: vec!["B".into(), "A".into()],
+            ..IndexSettings::default()
+        };
+        let b = IndexSettings {
+            entity_types: vec!["A".into(), "B".into()],
+            ..IndexSettings::default()
+        };
         assert_eq!(vocab_fingerprint(&a), vocab_fingerprint(&b));
     }
 

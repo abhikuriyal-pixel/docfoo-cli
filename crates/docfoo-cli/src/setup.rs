@@ -14,19 +14,24 @@ use std::time::Duration;
 use serde_json::{json, Value};
 
 use crate::error::{CliError, Result};
-use crate::util::sha256_file;
 use crate::workspace::Workspace;
 
 /// ONNX Runtime 1.28.0 — the same version as the Windows DLL the app bundles.
+#[cfg(not(windows))]
 const ORT_URL: &str =
     "https://github.com/microsoft/onnxruntime/releases/download/v1.28.0/onnxruntime-linux-x64-1.28.0.tgz";
+#[cfg(not(windows))]
 const ORT_SHA256: &str = "a3e1b79d7bb1bf09696ce675f49e4064e6c81f6202b8225624fff0e93f8d6407";
+#[cfg(not(windows))]
 const ORT_MEMBER: &str = "onnxruntime-linux-x64-1.28.0/lib/libonnxruntime.so.1.28.0";
 
 /// PDFium 151.0.7881.0 (Chromium 7881) — matches the bundled Windows DLL.
+#[cfg(not(windows))]
 const PDFIUM_URL: &str =
     "https://github.com/bblanchon/pdfium-binaries/releases/download/chromium%2F7881/pdfium-linux-x64.tgz";
+#[cfg(not(windows))]
 const PDFIUM_SHA256: &str = "1470e21b8b4a3b4ad7f85684e2da11d94f3b69a86d81dee11b9b6709d927ac1d";
+#[cfg(not(windows))]
 const PDFIUM_MEMBER: &str = "lib/libpdfium.so";
 
 const DOWNLOAD_TIMEOUT_SECS: u64 = 900;
@@ -204,6 +209,7 @@ fn download_to(url: &str, destination: &Path) -> Result<()> {
 
 /// Download a tarball, verify its checksum, and extract one member to
 /// `destination` (written as a regular file, so symlinked members work).
+#[cfg(not(windows))]
 fn download_member(url: &str, sha256: &str, member: &str, destination: &Path) -> Result<()> {
     let archive_path = destination.with_file_name(format!(
         ".{}.download",
@@ -213,7 +219,7 @@ fn download_member(url: &str, sha256: &str, member: &str, destination: &Path) ->
             .unwrap_or_else(|| "archive".to_string())
     ));
     download_to(url, &archive_path)?;
-    let actual = sha256_file(&archive_path)?;
+    let actual = crate::util::sha256_file(&archive_path)?;
     if !actual.eq_ignore_ascii_case(sha256) {
         let _ = std::fs::remove_file(&archive_path);
         return Err(CliError::Message(format!(
@@ -228,6 +234,7 @@ fn download_member(url: &str, sha256: &str, member: &str, destination: &Path) ->
 
 /// Extract one member from a `.tar.gz` to `destination` as a regular file
 /// (so symlinked archive members work on every platform).
+#[cfg(any(not(windows), test))]
 fn extract_member(archive_path: &Path, member: &str, destination: &Path) -> Result<()> {
     let file = std::fs::File::open(archive_path)?;
     let decoder = flate2::read::GzDecoder::new(file);

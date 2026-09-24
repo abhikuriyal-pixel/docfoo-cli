@@ -143,14 +143,14 @@ pub fn format_page(lines: &[String], offset: usize, limit: usize) -> PageSlice {
     let mut end_line = offset.saturating_sub(1);
     let mut clipped = false;
 
-    for index in from..to {
+    for (index, line) in lines.iter().enumerate().take(to).skip(from) {
         let prefix = format!("{:>5} | ", index + 1);
-        let full = format!("{prefix}{}", lines[index]);
+        let full = format!("{prefix}{line}");
         if bytes + full.len() + 1 > PAGE_MAX_BYTES {
             if out.is_empty() {
                 let room = PAGE_MAX_BYTES.saturating_sub(bytes + prefix.len() + 4);
                 if room > 0 {
-                    out.push(format!("{prefix}{}…", clip_utf8(&lines[index], room)));
+                    out.push(format!("{prefix}{}…", clip_utf8(line, room)));
                     end_line = index + 1;
                     clipped = true;
                 }
@@ -282,11 +282,16 @@ pub fn figure_lines(
         return Vec::new();
     }
     let mut found = Vec::new();
-    for index in (start_line - 1)..end_line.min(lines.len()) {
+    for (index, line) in lines
+        .iter()
+        .enumerate()
+        .take(end_line.min(lines.len()))
+        .skip(start_line - 1)
+    {
         if found.len() >= max {
             break;
         }
-        if let Some(reference) = image_of_line(&lines[index]) {
+        if let Some(reference) = image_of_line(line) {
             found.push(FigureLine {
                 line: index + 1,
                 markdown: figure_markdown(&resource_image_path(rel, &reference)),
@@ -763,15 +768,26 @@ fn file_entry(abs: &Path, rel: &str) -> ListingEntry {
 }
 
 /// One directory level, folders first (sorted), then files (sorted).
+/// A missing root (`rel == ""`) lists as empty; a missing subfolder is an
+/// error.
 pub fn list_level(root: &Path, rel: &str, include_figure_paths: bool) -> Result<Listing> {
     let (rel, dir) = resolve_rel(root, rel)?;
-    let read = std::fs::read_dir(&dir).map_err(|error| {
-        if error.kind() == std::io::ErrorKind::NotFound {
-            CliError::NotFound(format!("resource folder not found: {rel}"))
-        } else {
-            CliError::Io(error)
+    let read = match std::fs::read_dir(&dir) {
+        Ok(read) => read,
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound && rel.is_empty() => {
+            return Ok(Listing {
+                entries: Vec::new(),
+                total: 0,
+                truncated: false,
+            });
         }
-    })?;
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
+            return Err(CliError::NotFound(format!(
+                "resource folder not found: {rel}"
+            )));
+        }
+        Err(error) => return Err(CliError::Io(error)),
+    };
     let mut dirs: Vec<String> = Vec::new();
     let mut files: Vec<String> = Vec::new();
     for entry in read.flatten() {
