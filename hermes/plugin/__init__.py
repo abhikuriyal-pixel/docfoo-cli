@@ -76,7 +76,7 @@ def _run_cli(cfg: dict, question: str) -> str:
         argv += ["--model", cfg["model"]]
     if cfg["reasoning"]:
         argv += ["--reasoning", cfg["reasoning"]]
-    argv += ["--format", "slack", "--hermes-final"]
+    argv += ["--format", "slack", "--hermes-final", "--no-sources"]
     try:
         proc = subprocess.run(argv, capture_output=True, text=True, timeout=300)
     except Exception as exc:

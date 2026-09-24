@@ -26,8 +26,8 @@ All four slots at once: `cat ~/.docfoo/model-selection.json` (keys
 Never run `docfoo kg --query` on your own. Document questions reach the CLI
 only when the user prefixes the message with `dofoq`, and that path is handled
 outside the agent. Run `kg --query` only if the user explicitly asks you to,
-and add `--reasoning off` for the fastest answer unless deeper thinking is
-requested.
+and add `--reasoning off --no-sources` for the fastest, cleanest answer unless
+deeper thinking or the source list is requested.
 
 ## Browse the library
 

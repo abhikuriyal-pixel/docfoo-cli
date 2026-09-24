@@ -15,9 +15,11 @@ docfoo kg --query "How are the National Education Policy 2020 and the NCF connec
   --format slack --hermes-final
 ```
 
-- `--format slack` keeps GFM tables (native Slack table blocks when rich
-  rendering is on), turns local figures into `MEDIA:/absolute/path` lines, and
-  appends a compact `Sources:` section.
+- `--format slack` keeps GFM tables, converts `$…$`/`$$…$$` LaTeX to
+  readable Unicode math, renders `[doc.md:75-89]` citations as inline-code
+  chips, turns local figures into `MEDIA:/absolute/path` lines, and appends a
+  compact `Sources:` section (`--no-sources` omits it; the Hermes plugin
+  always omits it).
 - `--hermes-final` prepends the `[[hermes:final]]` sentinel so a patched
   Hermes can return the rest verbatim.
 - `--quote-sources` adds the exact cited lines under each source (verbose).
