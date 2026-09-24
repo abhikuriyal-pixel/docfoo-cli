@@ -22,7 +22,6 @@ import asyncio
 import functools
 import json
 import logging
-import re
 import subprocess
 from pathlib import Path
 
@@ -34,6 +33,7 @@ CONFIG_PATH = PLUGIN_DIR / "config.json"
 SKILL_PATH = PLUGIN_DIR / "SKILL.md"
 SECTION_ID = "docfoo.cli"
 DEFAULT_BIN = "docfoo"
+DEFAULT_TRIGGER = "dofoq"
 
 
 def load_config() -> dict:
@@ -49,6 +49,7 @@ def load_config() -> dict:
         "workspace": str(data.get("workspace") or "").strip(),
         "model": str(data.get("model") or "").strip(),
         "scope": str(data.get("scope") or "").strip(),
+        "trigger": str(data.get("trigger") if data.get("trigger") is not None else DEFAULT_TRIGGER).strip(),
     }
 
 
@@ -65,17 +66,17 @@ def query_command(cfg: dict) -> str:
     return " ".join(parts)
 
 
-# --- direct keyword route ---------------------------------------------------
-# A message containing the word "docfoo" is answered by the CLI directly: the
-# gateway hook below runs the command and sends the result, so the message never
-# reaches the model (saves the whole first LLM call).
-
-DOCFOO_WORD = re.compile(r"(?i)\bdocfoo\b")
+# --- direct trigger route ---------------------------------------------------
+# A message containing the trigger word (default "dofoq", case-insensitive) is
+# answered by the CLI directly: the gateway hook runs the command and sends the
+# result, so the message never reaches the model.
 
 
-def _strip_keyword(text: str) -> str:
-    cleaned = DOCFOO_WORD.sub("", text, count=1)
-    return cleaned.strip(" \t\r\n,;:-\u2014\u2013")
+def _strip_trigger(text: str, trigger: str) -> str:
+    idx = text.lower().find(trigger)
+    if idx >= 0:
+        text = text[:idx] + " " + text[idx + len(trigger):]
+    return text.strip(" \t\r\n,;:-\u2014\u2013")
 
 
 def _run_cli(cfg: dict, question: str) -> str:
@@ -155,9 +156,12 @@ async def _answer_direct(gateway, event, question: str) -> None:
 
 
 def _on_pre_gateway_dispatch(event=None, gateway=None, session_store=None, **kwargs):
-    """Route messages containing "docfoo" straight to the CLI (no model call)."""
+    """Route messages containing the trigger word straight to the CLI (no model call)."""
     text = (getattr(event, "text", "") or "").strip()
-    if not text or text.startswith("/") or not DOCFOO_WORD.search(text):
+    if not text or text.startswith("/"):
+        return None
+    trigger = load_config()["trigger"].lower()
+    if not trigger or trigger not in text.lower():
         return None
     source = getattr(event, "source", None)
     if source is None or gateway is None:
@@ -173,10 +177,12 @@ def _on_pre_gateway_dispatch(event=None, gateway=None, session_store=None, **kwa
         loop = asyncio.get_running_loop()
     except RuntimeError:
         return None
-    question = _strip_keyword(text) or text
+    question = _strip_trigger(text, trigger)
+    if not question:
+        return None
     loop.create_task(_answer_direct(gateway, event, question))
-    logger.info("docfoo_plugin: direct keyword route (%d chars)", len(question))
-    return {"action": "skip", "reason": "docfoo keyword route"}
+    logger.info("docfoo_plugin: direct trigger route (%d chars)", len(question))
+    return {"action": "skip", "reason": "dofoq trigger route"}
 
 
 def section_content(cfg: dict) -> str:

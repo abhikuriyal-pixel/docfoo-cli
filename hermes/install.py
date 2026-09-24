@@ -63,6 +63,7 @@ def main() -> int:
     parser.add_argument("--workspace", help="DocFoo workspace (e.g. the desktop app's db folder)")
     parser.add_argument("--model", help="provider/model for kg queries")
     parser.add_argument("--scope", help="default kg scope (a resource folder; omit for the whole library)")
+    parser.add_argument("--trigger", help="word that routes a message straight to the CLI (default: dofoq)")
     parser.add_argument("--bin", help="docfoo executable name or path (default: docfoo on PATH)")
     parser.add_argument("--check", action="store_true", help="Only report whether the plugin is installed")
     parser.add_argument("--uninstall", action="store_true", help="Disable and remove the plugin")
@@ -99,6 +100,8 @@ def main() -> int:
         config["model"] = args.model
     if args.scope is not None:
         config["scope"] = args.scope
+    if args.trigger is not None:
+        config["trigger"] = args.trigger
     if args.bin is not None:
         config["bin"] = args.bin
     (target / "config.json").write_text(json.dumps(config, indent=2) + "\n", encoding="utf-8")

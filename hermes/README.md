@@ -12,8 +12,8 @@ The plugin is the entire Hermes integration — no skill install, no
   `[[hermes:final]]` sentinel ends the turn with that text — Hermes never
   makes the second (paraphrase) model call. It unwraps Hermes' terminal
   envelope `{"output": "...", "exit_code": 0, "error": null}`;
-- a **direct keyword route** (see below): messages containing "docfoo" skip
-  the model entirely.
+- a **direct trigger route** (see below): messages containing the word
+  `dofoq` (any case) skip the model entirely.
 
 ## Install (once per machine)
 
@@ -40,23 +40,23 @@ The installer writes `<HERMES_HOME>/plugins/docfoo_plugin/` (default
 --no-allow-tool-override`. **Restart the Hermes gateway afterwards** so a
 running process picks up the new plugin.
 
-## Direct keyword route (no model call)
+## Direct trigger route (no model call)
 
-Any incoming message containing the word **docfoo** (case-insensitive) is
-intercepted by a `pre_gateway_dispatch` hook and answered by the CLI directly:
-the message never reaches the model, so the only latency is docfoo's synthesis
-(~6s) instead of synthesis + Hermes' tool-selection call (~12-19s). The reply
-is delivered through the platform adapter — typing indicator, markdown,
-`MEDIA:` figures — and authorization is still checked. Messages starting with
-`/` are left to the normal command registry.
+Any incoming message containing the word **dofoq** (any case: `Dofoq`, `DoFoq`,
+`DOFOQ`) is intercepted by a `pre_gateway_dispatch` hook and answered by the
+CLI directly: the message never reaches the model, so the only latency is
+docfoo's synthesis (~6s) instead of synthesis + Hermes' tool-selection call
+(~12-19s). The reply is delivered through the platform adapter — typing
+indicator, markdown, `MEDIA:` figures — and authorization is still checked.
+Messages starting with `/` are left to the normal command registry.
 
 ```
-docfoo what is the Universal Patch Encoder?
+dofoq what is the Universal Patch Encoder?
 ```
 
-The plugin strips the keyword and runs
-`docfoo kg --query "what is the Universal Patch Encoder?" --format slack --hermes-final`
-with the configured workspace/scope/model.
+Normal mentions of docfoo ("can you change docfoo's model?", "scan and index
+this pdf with docfoo") do **not** trigger the route — they go to Hermes like
+any other message. The trigger is configurable with `--trigger`.
 
 ## Why a plugin instead of a source patch
 
