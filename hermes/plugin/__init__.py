@@ -46,6 +46,7 @@ def load_config() -> dict:
         "workspace": str(data.get("workspace") or "").strip(),
         "model": str(data.get("model") or "").strip(),
         "scope": str(data.get("scope") or "").strip(),
+        "reasoning": str(data.get("reasoning") or "").strip(),
         "trigger": str(data.get("trigger") if data.get("trigger") is not None else DEFAULT_TRIGGER).strip(),
     }
 
@@ -73,6 +74,8 @@ def _run_cli(cfg: dict, question: str) -> str:
         argv += ["--scope", cfg["scope"]]
     if cfg["model"]:
         argv += ["--model", cfg["model"]]
+    if cfg["reasoning"]:
+        argv += ["--reasoning", cfg["reasoning"]]
     argv += ["--format", "slack", "--hermes-final"]
     try:
         proc = subprocess.run(argv, capture_output=True, text=True, timeout=300)

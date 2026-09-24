@@ -25,8 +25,9 @@ python3 hermes/install.py \
 ```
 
 Flags: `--workspace` (library / app `db/`), `--model` (kg query model),
-`--scope` (default kg scope; omit for the whole library), `--bin` (absolute
-path recommended for the gateway service), `--hermes-home DIR`.
+`--scope` (default kg scope; omit for the whole library), `--reasoning`
+(kg thinking level; `off` is fastest), `--bin` (absolute path recommended for
+the gateway service), `--trigger`, `--hermes-home DIR`.
 
 ```bash
 python3 hermes/install.py --check       # exit 0 when installed + show config
