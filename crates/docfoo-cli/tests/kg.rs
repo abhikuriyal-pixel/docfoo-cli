@@ -72,7 +72,7 @@ fn kg_query_expands_citations_and_reports_sources() {
         .args([
             "kg",
             "--query",
-            "What is an apple?",
+            "What are apples?",
             "--model",
             "fake-provider/fake-model",
             "--json",
@@ -116,7 +116,7 @@ fn kg_query_slack_output_has_sentinel_and_sources() {
         .args([
             "kg",
             "--query",
-            "What is an apple?",
+            "What are apples?",
             "--model",
             "fake-provider/fake-model",
             "--format",
