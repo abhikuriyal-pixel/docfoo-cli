@@ -75,6 +75,22 @@ fn user_agent() -> String {
     format!("DocFoo-CLI/{}", env!("CARGO_PKG_VERSION"))
 }
 
+/// Optional token for private repos (`GITHUB_TOKEN`, `GH_TOKEN`, or
+/// `DOCFOO_UPDATE_TOKEN`).
+fn github_token() -> Option<String> {
+    ["DOCFOO_UPDATE_TOKEN", "GITHUB_TOKEN", "GH_TOKEN"]
+        .iter()
+        .find_map(|name| std::env::var(name).ok())
+        .map(|token| token.trim().to_string())
+        .filter(|token| !token.is_empty())
+}
+
+fn is_github_host(url: &str) -> bool {
+    url.starts_with("https://github.com/")
+        || url.starts_with("https://api.github.com/")
+        || url.starts_with("https://objects.githubusercontent.com/")
+}
+
 /// Parse a GitHub `releases/latest` body for the current platform.
 pub fn parse_release(body: &Value) -> Option<ReleaseInfo> {
     let tag = body.get("tag_name")?.as_str()?.to_string();
@@ -126,10 +142,14 @@ pub fn check() -> Result<Option<ReleaseInfo>> {
             repo()
         )
     });
-    let mut response = agent()
+    let mut request = agent()
         .get(&api)
         .header("User-Agent", &user_agent())
-        .header("Accept", "application/vnd.github+json")
+        .header("Accept", "application/vnd.github+json");
+    if let Some(token) = github_token() {
+        request = request.header("Authorization", &format!("Bearer {token}"));
+    }
+    let mut response = request
         .call()
         .map_err(|error| CliError::Message(format!("update check failed: {error}")))?;
     let status = response.status().as_u16();
@@ -151,9 +171,13 @@ pub fn check() -> Result<Option<ReleaseInfo>> {
 }
 
 fn download(url: &str, destination: &Path) -> Result<()> {
-    let response = agent()
-        .get(url)
-        .header("User-Agent", &user_agent())
+    let mut request = agent().get(url).header("User-Agent", &user_agent());
+    if is_github_host(url) {
+        if let Some(token) = github_token() {
+            request = request.header("Authorization", &format!("Bearer {token}"));
+        }
+    }
+    let response = request
         .call()
         .map_err(|error| CliError::Message(format!("download failed: {error}")))?;
     let status = response.status().as_u16();
@@ -171,9 +195,13 @@ fn download(url: &str, destination: &Path) -> Result<()> {
 }
 
 fn read_checksum(url: &str) -> Result<String> {
-    let mut response = agent()
-        .get(url)
-        .header("User-Agent", &user_agent())
+    let mut request = agent().get(url).header("User-Agent", &user_agent());
+    if is_github_host(url) {
+        if let Some(token) = github_token() {
+            request = request.header("Authorization", &format!("Bearer {token}"));
+        }
+    }
+    let mut response = request
         .call()
         .map_err(|error| CliError::Message(format!("checksum download failed: {error}")))?;
     let text = response
@@ -324,6 +352,17 @@ mod tests {
     #[test]
     fn ignores_releases_without_a_platform_asset() {
         assert!(parse_release(&release_body("v0.2.0", "docfoo-cli-0.2.0-solaris.tgz")).is_none());
+    }
+
+    #[test]
+    fn github_hosts_get_authorized_only() {
+        assert!(is_github_host(
+            "https://api.github.com/repos/a/b/releases/latest"
+        ));
+        assert!(is_github_host(
+            "https://github.com/a/b/releases/download/v1/x.tar.gz"
+        ));
+        assert!(!is_github_host("https://example.com/a"));
     }
 
     #[test]

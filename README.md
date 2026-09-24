@@ -200,6 +200,9 @@ Human mode writes errors to stderr. Exit codes: `0` success, `1` runtime error,
 # Linux/WSL: install the latest release into ~/.local/bin
 ./install.sh                 # or --local to build from this checkout
 
+# Private repo: export a token first (the same is needed for `docfoo update`)
+export GITHUB_TOKEN="$(gh auth token)"
+
 # Windows: build from source and keep the pair together
 cargo build --release
 cd sidecar && ./build.ps1    # produces docfoo-agent.exe next to docfoo.exe

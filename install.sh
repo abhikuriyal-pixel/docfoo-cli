@@ -10,6 +10,13 @@ set -euo pipefail
 
 REPO="${DOCFOO_REPO:-abhikuriyal-pixel/docfoo-cli}"
 PREFIX="${DOCFOO_PREFIX:-$HOME/.local/bin}"
+
+# Private repos: set GITHUB_TOKEN (or GH_TOKEN) to a token with repo access.
+AUTH=()
+TOKEN="${GITHUB_TOKEN:-${GH_TOKEN:-}}"
+if [ -n "$TOKEN" ]; then
+  AUTH=(-H "Authorization: Bearer $TOKEN")
+fi
 VERSION="${DOCFOO_VERSION:-latest}"
 LOCAL=0
 SKIP_SETUP=0
@@ -51,7 +58,7 @@ if [ "$LOCAL" = 1 ]; then
 else
   if [ "$VERSION" = latest ]; then
     API="https://api.github.com/repos/$REPO/releases/latest"
-    TAG="$(curl -fsSL "$API" | sed -n 's/.*"tag_name": *"v\{0,1\}\([^"]*\)".*/\1/p' | head -1)"
+    TAG="$(curl -fsSL "${AUTH[@]}" "$API" | sed -n 's/.*"tag_name": *"v\{0,1\}\([^"]*\)".*/\1/p' | head -1)"
     [ -n "$TAG" ] || { echo "could not find a release for $REPO" >&2; exit 1; }
   else
     TAG="${VERSION#v}"
@@ -59,8 +66,8 @@ else
   ASSET="docfoo-cli-${TAG}-linux-x64.tar.gz"
   URL="https://github.com/$REPO/releases/download/v${TAG}/${ASSET}"
   echo "downloading $URL"
-  curl -fsSL -o "$TMP/$ASSET" "$URL"
-  if curl -fsSL -o "$TMP/$ASSET.sha256" "$URL.sha256" 2>/dev/null; then
+  curl -fsSL "${AUTH[@]}" -o "$TMP/$ASSET" "$URL"
+  if curl -fsSL "${AUTH[@]}" -o "$TMP/$ASSET.sha256" "$URL.sha256" 2>/dev/null; then
     ( cd "$TMP" && sha256sum -c "$ASSET.sha256" )
   else
     echo "warning: no .sha256 asset — skipping checksum verification" >&2
