@@ -56,7 +56,7 @@ fn complete_streams_deltas() {
         )
         .expect("complete");
     assert_eq!(text, "fake completion");
-    assert_eq!(deltas, "streamed ");
+    assert_eq!(deltas, "fake completion");
 }
 
 #[test]

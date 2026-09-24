@@ -4,15 +4,18 @@
 //! binary (argument parsing + dispatch). Integration tests import this crate
 //! directly; the sidecar client tests spawn the `fake-sidecar` fixture binary.
 
-// Stage 1.2 ships modules ahead of their consumers. Remove this allow once
-// Stages 1.3–2 land.
+// Stage 1.3 ships modules ahead of their consumers. Remove this allow once
+// Stages 2–5 land.
 #![allow(dead_code)]
 
+pub mod citations;
 pub mod cli;
 pub mod commands;
 pub mod config;
 pub mod error;
+pub mod kg;
 pub mod output;
+pub mod render;
 pub mod sidecar;
 pub mod util;
 pub mod workspace;

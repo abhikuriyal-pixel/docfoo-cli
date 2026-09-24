@@ -7,6 +7,7 @@ use crate::output::OutputFormat;
 use crate::workspace::Workspace;
 
 mod auth;
+mod kg;
 mod model;
 mod version;
 
@@ -15,10 +16,7 @@ pub fn dispatch(cli: &Cli, format: OutputFormat, workspace: &Workspace) -> Resul
         Command::Version(args) => version::run(format, workspace, args),
         Command::Model(args) => model::run(format, workspace, args),
         Command::Auth(args) => auth::run(format, workspace, args),
-        Command::Kg(_) => Err(CliError::NotImplemented(
-            "kg is not implemented yet — the model sidecar is not built (Stages 1.2–1.3)"
-                .to_string(),
-        )),
+        Command::Kg(args) => kg::run(cli, format, workspace, args),
         Command::Scan(_) => Err(CliError::NotImplemented(
             "scan is not implemented yet (Stage 4)".to_string(),
         )),

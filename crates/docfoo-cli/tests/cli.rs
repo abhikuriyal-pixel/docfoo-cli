@@ -64,20 +64,24 @@ fn help_lists_core_commands() {
 }
 
 #[test]
-fn kg_query_stub_fails_with_sidecar_hint() {
+fn kg_query_without_graph_reports_the_index_hint() {
+    let temp = tempfile::tempdir().unwrap();
     let output = docfoo()
-        .args(["kg", "--query", "anything"])
+        .args(["kg", "--query", "anything", "--workspace"])
+        .arg(temp.path())
         .output()
         .expect("run docfoo");
     assert_eq!(output.status.code(), Some(1));
     let stderr = String::from_utf8_lossy(&output.stderr);
-    assert!(stderr.contains("sidecar"), "stderr: {stderr}");
+    assert!(stderr.contains("kg --index"), "stderr: {stderr}");
 }
 
 #[test]
-fn kg_query_stub_json_error_envelope() {
+fn kg_query_json_error_envelope() {
+    let temp = tempfile::tempdir().unwrap();
     let output = docfoo()
-        .args(["--json", "kg", "--query", "anything"])
+        .args(["--json", "kg", "--query", "anything", "--workspace"])
+        .arg(temp.path())
         .output()
         .expect("run docfoo");
     assert_eq!(output.status.code(), Some(1));
@@ -86,7 +90,36 @@ fn kg_query_stub_json_error_envelope() {
     assert_eq!(value["ok"], false);
     assert_eq!(value["schema"], "docfoo.cli/1");
     assert_eq!(value["command"], "kg");
-    assert_eq!(value["error"]["code"], "not_implemented");
+    assert_eq!(value["error"]["code"], "not_found");
+}
+
+#[test]
+fn kg_status_on_an_empty_workspace() {
+    let temp = tempfile::tempdir().unwrap();
+    let output = docfoo()
+        .args(["kg", "--status", "--json", "--workspace"])
+        .arg(temp.path())
+        .output()
+        .expect("run docfoo");
+    assert!(output.status.success());
+    let value: serde_json::Value =
+        serde_json::from_slice(&output.stdout).expect("json envelope");
+    assert_eq!(value["command"], "kg.status");
+    assert_eq!(value["data"]["exists"], false);
+    assert_eq!(value["data"]["built"].as_array().unwrap().len(), 0);
+}
+
+#[test]
+fn kg_index_with_no_resources_reports_nothing_to_index() {
+    let temp = tempfile::tempdir().unwrap();
+    let output = docfoo_with_fake_sidecar()
+        .args(["kg", "--index", "--model", "fake-provider/fake-model", "--workspace"])
+        .arg(temp.path())
+        .output()
+        .expect("run docfoo");
+    assert_eq!(output.status.code(), Some(1));
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(stderr.contains("nothing to index"), "stderr: {stderr}");
 }
 
 #[test]

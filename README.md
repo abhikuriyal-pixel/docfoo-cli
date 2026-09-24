@@ -2,9 +2,10 @@
 
 Barebones, scriptable DocFoo for the shell and for agents (Hermes/Slack).
 
-> **Status:** Stage 1.2 — skeleton + bundled Pi sidecar. `version`, `model` and
-> `auth` work; every other command reports the stage that will land. See
-> `PLAN.md` for the full architecture and stage breakdown.
+> **Status:** Stage 1 complete — skeleton, bundled Pi sidecar, `model`/`auth`,
+> and `kg --index/--query/--status` with rich JSON and Slack output. Stages 2–6
+> (resources/notes, backup/collections, scan/setup, packaging) are pending. See
+> `PLAN.md` for the architecture and stage breakdown.
 
 ## Build
 
@@ -42,8 +43,40 @@ docfoo auth --set PROVIDER [--key KEY]    # prompts on a TTY when --key is omitt
 docfoo auth --logout PROVIDER
 ```
 
+### Knowledge graph
+
+```bash
+# Build or refresh the whole-library graph (progress on stderr)
+docfoo kg --index
+
+# Scope a build to one resources folder
+docfoo kg --index --scope papers/ml
+
+# Show built graphs and counts
+docfoo kg --status [--scope DIR] [--json]
+
+# Ask a question: one-shot final answer, no agent loop
+docfoo kg --query "How are the National Education Policy 2020 and the NCF connected?"
+
+# Machine-readable envelope (answer + citations + figures + sources)
+docfoo kg --query "What is axial cross-attention?" --scope single_column_test --json
+
+# Slack-ready output: figures become MEDIA: lines, Sources section appended,
+# optional [[hermes:final]] sentinel for a patched Hermes to relay verbatim
+docfoo kg --query "..." --format slack --hermes-final [--plain-tables] [--quote-sources]
+
+# Persist the turn to an app-compatible kg-chats/ entry
+docfoo kg --query "..." --save
+```
+
+Query flags: `--scope DIR`, `--model provider/model`, `--reasoning off|minimal|…|max`,
+`--stream` (synthesis deltas to stderr), `--save`, `--hermes-final`,
+`--plain-tables`, `--no-sources`, `--quote-sources`, `--max-chars N`.
+
 Global flags: `--workspace DIR`, `--json`, `--format markdown|slack|json`,
 `--quiet`, `--verbose`, `--no-color`.
+
+## Workspace
 
 The workspace resolves in this order:
 
@@ -53,8 +86,9 @@ The workspace resolves in this order:
 
 `DOCFOO_AGENT_DIR` and `DOCFOO_MODELS_DIR` override the derived agent and native
 models directories. The layout matches the desktop app's `db/` folder, so you
-can point `--workspace` at an existing DocFoo library. Model slots and provider
-credentials are shared with the app (`model-selection.json`, Pi `auth.json`).
+can point `--workspace` at an existing DocFoo library. Model slots, provider
+credentials and KG settings are shared with the app (`model-selection.json`,
+Pi `auth.json`, `kg-settings.json`).
 
 ## Output contract
 
@@ -64,9 +98,14 @@ Every command emits a `docfoo.cli/1` JSON envelope with `--json`:
 {
   "ok": true,
   "schema": "docfoo.cli/1",
-  "command": "version",
+  "command": "kg.query",
   "workspace": "/home/abhishek/.docfoo",
-  "data": { "cliVersion": "0.1.0" }
+  "data": {
+    "answer_markdown": "…[card/content.md:75-89]…",
+    "citations": [{ "file": "card/content.md", "line_start": 75, "line_end": 89 }],
+    "figures": [{ "path": "card/assets/f.png", "abs_path": "/…/f.png" }],
+    "sources": [{ "doc": "card/content.md", "start_line": 75, "end_line": 89 }]
+  }
 }
 ```
 
@@ -75,15 +114,8 @@ stable `code` (`usage`, `not_found`, `not_implemented`, `io`, `json`, `error`).
 Human mode writes errors to stderr. Exit codes: `0` success, `1` runtime error,
 `2` usage error.
 
-## Sidecar protocol
-
-One JSON object per line on stdin/stdout. Requests: `complete`, `cancel`,
-`models`, `auth_status`, `auth_set`, `auth_logout`, `ping`. Responses are tagged
-with the request id (`complete_response`, `stream_delta`, `models_response`,
-`auth_status_response`, `auth_set_response`, `auth_logout_response`, `pong`).
-See `PLAN.md` §3.4 for the full shapes.
-
 ## Roadmap
 
-See `PLAN.md`. Stage 1.3 adds `kg --index/--query/--status` with rich JSON and
-Slack output; Stage 2 adds read-only resources and notes.
+See `PLAN.md`. Stage 2 adds read-only `resources`/`notes`; Stage 3 local
+`backup`/`restore` and community `collections --download`; Stage 4 `scan` plus
+`setup`; Stage 5 packaging, `update`, and `docs/HERMES.md`.

@@ -73,10 +73,17 @@ fn main() {
                 json!({ "type": "auth_logout_response", "requestId": request_id, "success": true }),
             ),
             "complete" => {
+                // KG synthesis requests carry the evidence block; answer with
+                // an [S1] tag so the crate's tag expansion is exercised.
+                let text = if request_contains(&value, "EVIDENCE:") {
+                    "Synthesized answer. [S1]"
+                } else {
+                    "fake completion"
+                };
                 if value.get("stream").and_then(Value::as_bool) == Some(true) {
                     emit(
                         &mut out,
-                        json!({ "type": "stream_delta", "requestId": request_id, "text": "streamed " }),
+                        json!({ "type": "stream_delta", "requestId": request_id, "text": text }),
                     );
                 }
                 if fail {
@@ -87,7 +94,7 @@ fn main() {
                 } else {
                     emit(
                         &mut out,
-                        json!({ "type": "complete_response", "requestId": request_id, "success": true, "text": "fake completion" }),
+                        json!({ "type": "complete_response", "requestId": request_id, "success": true, "text": text }),
                     );
                 }
             }
@@ -101,6 +108,23 @@ fn env_number(name: &str) -> u64 {
         .ok()
         .and_then(|value| value.parse().ok())
         .unwrap_or(0)
+}
+
+/// True when any string message content contains `needle`.
+fn request_contains(value: &Value, needle: &str) -> bool {
+    value
+        .get("messages")
+        .and_then(Value::as_array)
+        .map(|messages| {
+            messages.iter().any(|message| {
+                message
+                    .get("content")
+                    .and_then(Value::as_str)
+                    .map(|content| content.contains(needle))
+                    .unwrap_or(false)
+            })
+        })
+        .unwrap_or(false)
 }
 
 fn emit(out: &mut impl Write, value: Value) {

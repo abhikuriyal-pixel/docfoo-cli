@@ -5,6 +5,10 @@
 //! spawns it lazily, routes tagged responses to the waiting request, and kills
 //! it when the command exits.
 //!
+//! The client is thread-safe: KG indexing fans completions out across worker
+//! threads, so `request`/`complete`/`models` take `&self` and share the child's
+//! stdin behind a mutex. Deltas are routed to the request that owns them.
+//!
 //! Resolution order for the sidecar executable:
 //!   1. `DOCFOO_SIDECAR_BIN`
 //!   2. `docfoo-agent` next to the CLI binary
@@ -309,8 +313,8 @@ fn find_on_path(name: &str) -> Option<PathBuf> {
 }
 
 pub struct SidecarClient {
-    child: Child,
-    stdin: ChildStdin,
+    child: Mutex<Child>,
+    stdin: Mutex<ChildStdin>,
     pending: Arc<PendingMap>,
     alive: Arc<AtomicBool>,
 }
@@ -371,34 +375,41 @@ impl SidecarClient {
         });
 
         Ok(Self {
-            child,
-            stdin,
+            child: Mutex::new(child),
+            stdin: Mutex::new(stdin),
             pending,
             alive,
         })
     }
 
-    pub fn is_alive(&mut self) -> bool {
+    pub fn is_alive(&self) -> bool {
         if !self.alive.load(Ordering::SeqCst) {
             return false;
         }
-        matches!(self.child.try_wait(), Ok(None))
+        match self.child.lock() {
+            Ok(mut child) => matches!(child.try_wait(), Ok(None)),
+            Err(_) => false,
+        }
     }
 
-    fn send(&mut self, value: &Value) -> std::result::Result<(), SidecarError> {
+    fn send(&self, value: &Value) -> std::result::Result<(), SidecarError> {
         let mut line = serde_json::to_string(value)
             .map_err(|error| SidecarError::Transport(error.to_string()))?;
         line.push('\n');
-        self.stdin
+        let mut stdin = self
+            .stdin
+            .lock()
+            .map_err(|_| SidecarError::Transport("the sidecar pipe is poisoned".to_string()))?;
+        stdin
             .write_all(line.as_bytes())
             .map_err(|error| SidecarError::Transport(format!("could not write to the sidecar: {error}")))?;
-        self.stdin
+        stdin
             .flush()
             .map_err(|error| SidecarError::Transport(format!("could not flush the sidecar pipe: {error}")))
     }
 
     fn request(
-        &mut self,
+        &self,
         mut payload: Value,
         cancel: Option<&AtomicBool>,
         mut on_delta: Option<&mut dyn FnMut(&str)>,
@@ -475,7 +486,7 @@ impl SidecarClient {
     }
 
     pub fn complete(
-        &mut self,
+        &self,
         request: CompletionRequest,
         cancel: Option<&AtomicBool>,
         on_delta: Option<&mut dyn FnMut(&str)>,
@@ -489,13 +500,13 @@ impl SidecarClient {
             .to_string())
     }
 
-    pub fn models(&mut self) -> std::result::Result<Vec<ProviderInfo>, SidecarError> {
+    pub fn models(&self) -> std::result::Result<Vec<ProviderInfo>, SidecarError> {
         let value = self.request(json!({ "type": "models" }), None, None, DEFAULT_TIMEOUT)?;
         providers_from(&value)
     }
 
     pub fn auth_status(
-        &mut self,
+        &self,
         provider: Option<&str>,
     ) -> std::result::Result<Vec<ProviderInfo>, SidecarError> {
         let mut payload = json!({ "type": "auth_status" });
@@ -506,11 +517,7 @@ impl SidecarClient {
         providers_from(&value)
     }
 
-    pub fn auth_set(
-        &mut self,
-        provider: &str,
-        key: &str,
-    ) -> std::result::Result<(), SidecarError> {
+    pub fn auth_set(&self, provider: &str, key: &str) -> std::result::Result<(), SidecarError> {
         self.request(
             json!({ "type": "auth_set", "provider": provider, "key": key }),
             None,
@@ -520,7 +527,7 @@ impl SidecarClient {
         Ok(())
     }
 
-    pub fn auth_logout(&mut self, provider: &str) -> std::result::Result<(), SidecarError> {
+    pub fn auth_logout(&self, provider: &str) -> std::result::Result<(), SidecarError> {
         self.request(
             json!({ "type": "auth_logout", "provider": provider }),
             None,
@@ -530,7 +537,7 @@ impl SidecarClient {
         Ok(())
     }
 
-    pub fn ping(&mut self) -> std::result::Result<(), SidecarError> {
+    pub fn ping(&self) -> std::result::Result<(), SidecarError> {
         self.request(
             json!({ "type": "ping" }),
             None,
@@ -543,8 +550,10 @@ impl SidecarClient {
 
 impl Drop for SidecarClient {
     fn drop(&mut self) {
-        let _ = self.child.kill();
-        let _ = self.child.wait();
+        if let Ok(mut child) = self.child.lock() {
+            let _ = child.kill();
+            let _ = child.wait();
+        }
     }
 }
 
@@ -572,7 +581,7 @@ fn next_request_id() -> String {
 pub struct Sidecar {
     launch: SidecarLaunch,
     agent_dir: PathBuf,
-    client: Option<SidecarClient>,
+    client: Option<Arc<SidecarClient>>,
     spawns: u32,
 }
 
@@ -587,10 +596,11 @@ impl Sidecar {
     }
 
     /// The live client, spawning (or respawning after a crash) on demand.
-    pub fn client(&mut self) -> Result<&mut SidecarClient> {
+    /// The returned `Arc` is safe to share with worker threads.
+    pub fn client(&mut self) -> Result<Arc<SidecarClient>> {
         let needs_spawn = self
             .client
-            .as_mut()
+            .as_ref()
             .map_or(true, |client| !client.is_alive());
         if needs_spawn {
             if self.spawns >= MAX_SPAWNS {
@@ -602,10 +612,13 @@ impl Sidecar {
             if self.spawns > 0 {
                 thread::sleep(Duration::from_secs(1 << (self.spawns - 1)));
             }
-            self.client = Some(SidecarClient::spawn(&self.launch, &self.agent_dir)?);
+            self.client = Some(Arc::new(SidecarClient::spawn(
+                &self.launch,
+                &self.agent_dir,
+            )?));
             self.spawns += 1;
         }
-        Ok(self.client.as_mut().expect("sidecar was spawned"))
+        Ok(Arc::clone(self.client.as_ref().expect("sidecar was spawned")))
     }
 }
 
