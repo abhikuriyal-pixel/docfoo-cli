@@ -2,10 +2,11 @@
 
 Barebones, scriptable DocFoo for the shell and for agents (Hermes/Slack).
 
-> **Status:** Stages 1–2 complete — skeleton, bundled Pi sidecar, `model`/`auth`,
-> `kg --index/--query/--status` with rich JSON and Slack output, and read-only
-> `resources`/`notes`. Stages 3–6 (backup/collections, scan/setup, packaging)
-> are pending. See `PLAN.md` for the architecture and stage breakdown.
+> **Status:** Stages 1–3 complete — skeleton, bundled Pi sidecar, `model`/`auth`,
+> `kg --index/--query/--status` with rich JSON and Slack output, read-only
+> `resources`/`notes`, local `backup`/`restore`, and community
+> `collections --download`. Stages 4–6 (scan/setup, packaging) are pending.
+> See `PLAN.md` for the architecture and stage breakdown.
 
 ## Build
 
@@ -103,6 +104,26 @@ docfoo notes --read NOTE_ID [--json]
 JSON envelope also carries `text` (plain), `nextOffset`, and the window's
 figures. Nothing in this stage writes to the workspace.
 
+### Backup, restore and collections
+
+```bash
+# Create a docfoo-backup v1 zip (app-compatible)
+docfoo backup [--out FILE] [--json]
+
+# Restore a backup (asks for confirmation unless --yes)
+docfoo restore FILE [--yes] [--json]
+
+# Community collections
+docfoo collections --list [--json]
+docfoo collections --info ID|NAME [--type resource|kg] [--json]
+docfoo collections --download ID|NAME [--type resource|kg] [--name NAME] [--force] [--json]
+```
+
+The backup format is identical to the desktop app's, so backups move in both
+directions. Restore stages the archive, snapshots the live data, swaps it in
+atomically, and keeps a journal so an interrupted restore rolls back on the
+next run.
+
 Global flags: `--workspace DIR`, `--json`, `--format markdown|slack|json`,
 `--quiet`, `--verbose`, `--no-color`.
 
@@ -146,6 +167,5 @@ Human mode writes errors to stderr. Exit codes: `0` success, `1` runtime error,
 
 ## Roadmap
 
-See `PLAN.md`. Stage 3 adds local `backup`/`restore` and community
-`collections --download`; Stage 4 `scan` plus `setup`; Stage 5 packaging,
-`update`, and `docs/HERMES.md`.
+See `PLAN.md`. Stage 4 adds `scan` plus `setup`; Stage 5 packaging, `update`,
+and `docs/HERMES.md`.

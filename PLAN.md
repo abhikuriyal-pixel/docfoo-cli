@@ -1,8 +1,9 @@
 # DocFoo CLI — Implementation Plan
 
-> **Status:** Stages 1–2 complete: skeleton, bundled Pi sidecar, `model`/`auth`,
-> `kg --index/--query/--status`, and read-only `resources`/`notes`; 96 tests
-> green. Stages 3–6 pending. See §7 for the breakdown.
+> **Status:** Stages 1–3 complete: skeleton, bundled Pi sidecar, `model`/`auth`,
+> `kg --index/--query/--status`, read-only `resources`/`notes`, local
+> `backup`/`restore` and community `collections --download`; 111 tests green.
+> Stages 4–6 pending. See §7 for the breakdown.
 > **Companion project:** `C:\Users\abhik\Documents\Test\DocFoo` (the Tauri desktop app).
 > **Primary consumer:** Hermes (Slack agent) running in WSL, which invokes `docfoo` commands
 > through its `terminal` tool.
@@ -465,6 +466,8 @@ Acceptance: `docfoo resources --list --json`, `--outline`, `--search` and `docfo
 work against the app's real `db/` workspace without writing anything.
 
 ### Stage 3 — Backup/restore + collections download
+
+**Status:** 🟢 done
 
 Deliverables:
 

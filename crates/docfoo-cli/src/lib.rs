@@ -8,8 +8,10 @@
 // Stages 2–5 land.
 #![allow(dead_code)]
 
+pub mod backup;
 pub mod citations;
 pub mod cli;
+pub mod collections;
 pub mod commands;
 pub mod config;
 pub mod error;
