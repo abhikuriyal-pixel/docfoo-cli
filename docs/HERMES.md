@@ -80,6 +80,13 @@ The plugin is the entire Hermes integration — no skill install, no
    makes the second (paraphrase) model call. It unwraps Hermes' terminal
    envelope `{"output": "...", "exit_code": 0, "error": null}` as well as
    plain-string tool results.
+4. **A direct keyword route**: any message containing the word `docfoo` (e.g.
+   "docfoo what does the paper say about X?") is intercepted by a
+   `pre_gateway_dispatch` hook and answered by the CLI directly. The message
+   never reaches the model, so the only latency left is docfoo's synthesis
+   (~6s instead of ~12-19s). The reply goes through the platform adapter with
+   the same typing indicator, markdown and `MEDIA:` figure handling as a
+   normal answer; authorization is still enforced.
 
 Install it once (cross-platform, pure Python):
 

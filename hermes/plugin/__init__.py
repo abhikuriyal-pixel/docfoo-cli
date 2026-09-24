@@ -18,9 +18,12 @@ simply stops applying; the sentinel is ignored and the turn still completes.
 
 from __future__ import annotations
 
+import asyncio
 import functools
 import json
 import logging
+import re
+import subprocess
 from pathlib import Path
 
 logger = logging.getLogger(__name__)
@@ -60,6 +63,120 @@ def query_command(cfg: dict) -> str:
         parts += ["--model", cfg["model"]]
     parts += ["--format", "slack", "--hermes-final"]
     return " ".join(parts)
+
+
+# --- direct keyword route ---------------------------------------------------
+# A message containing the word "docfoo" is answered by the CLI directly: the
+# gateway hook below runs the command and sends the result, so the message never
+# reaches the model (saves the whole first LLM call).
+
+DOCFOO_WORD = re.compile(r"(?i)\bdocfoo\b")
+
+
+def _strip_keyword(text: str) -> str:
+    cleaned = DOCFOO_WORD.sub("", text, count=1)
+    return cleaned.strip(" \t\r\n,;:-\u2014\u2013")
+
+
+def _run_cli(cfg: dict, question: str) -> str:
+    """Run ``docfoo kg --query`` and return the answer with the sentinel stripped."""
+    argv = [cfg["bin"]]
+    if cfg["workspace"]:
+        argv += ["--workspace", cfg["workspace"]]
+    argv += ["kg", "--query", question]
+    if cfg["scope"]:
+        argv += ["--scope", cfg["scope"]]
+    if cfg["model"]:
+        argv += ["--model", cfg["model"]]
+    argv += ["--format", "slack", "--hermes-final"]
+    try:
+        proc = subprocess.run(argv, capture_output=True, text=True, timeout=300)
+    except Exception as exc:
+        return f"docfoo failed: {exc}"
+    out = (proc.stdout or "").lstrip()
+    if out.startswith(SENTINEL):
+        out = out[len(SENTINEL):].lstrip("\n")
+    if proc.returncode != 0 or not out.strip():
+        detail = (proc.stderr or "").strip() or "no output"
+        return f"docfoo failed: {detail}"
+    return out
+
+
+def _metadata_for(gateway, source):
+    builder = getattr(gateway, "_thread_metadata_for_source", None)
+    if callable(builder):
+        try:
+            meta = builder(source, None)
+            if isinstance(meta, dict):
+                return meta
+        except Exception:
+            pass
+    thread_id = getattr(source, "thread_id", None)
+    return {"thread_id": thread_id} if thread_id else None
+
+
+async def _answer_direct(gateway, event, question: str) -> None:
+    cfg = load_config()
+    source = event.source
+    adapter = (getattr(gateway, "adapters", None) or {}).get(source.platform)
+    if adapter is None:
+        logger.warning("docfoo_plugin: no adapter for %s; falling back", source.platform)
+        return
+    metadata = _metadata_for(gateway, source)
+    typing = getattr(adapter, "send_typing", None)
+    if callable(typing):
+        try:
+            await typing(source.chat_id, metadata=metadata)
+        except Exception:
+            pass
+    answer = await asyncio.to_thread(_run_cli, cfg, question)
+    try:
+        media_files, cleaned = adapter.extract_media(answer)
+    except Exception:
+        media_files, cleaned = [], answer
+    filter_paths = getattr(adapter, "filter_media_delivery_paths", None)
+    if callable(filter_paths):
+        try:
+            media_files = filter_paths(media_files)
+        except Exception:
+            pass
+    if cleaned.strip():
+        try:
+            await adapter.send(chat_id=source.chat_id, content=cleaned, metadata=metadata)
+        except Exception as exc:
+            logger.warning("docfoo_plugin: direct send failed: %s", exc)
+    for media_path, _is_voice in (media_files or []):
+        sender = getattr(adapter, "send_image_file", None)
+        if callable(sender):
+            try:
+                await sender(chat_id=source.chat_id, image_path=media_path, metadata=metadata)
+            except Exception as exc:
+                logger.warning("docfoo_plugin: direct image send failed: %s", exc)
+
+
+def _on_pre_gateway_dispatch(event=None, gateway=None, session_store=None, **kwargs):
+    """Route messages containing "docfoo" straight to the CLI (no model call)."""
+    text = (getattr(event, "text", "") or "").strip()
+    if not text or text.startswith("/") or not DOCFOO_WORD.search(text):
+        return None
+    source = getattr(event, "source", None)
+    if source is None or gateway is None:
+        return None
+    authorized = getattr(gateway, "_is_user_authorized_for_source", None)
+    if callable(authorized):
+        try:
+            if not authorized(source):
+                return None
+        except Exception:
+            return None
+    try:
+        loop = asyncio.get_running_loop()
+    except RuntimeError:
+        return None
+    question = _strip_keyword(text) or text
+    loop.create_task(_answer_direct(gateway, event, question))
+    logger.info("docfoo_plugin: direct keyword route (%d chars)", len(question))
+    return {"action": "skip", "reason": "docfoo keyword route"}
 
 
 def section_content(cfg: dict) -> str:
@@ -212,4 +329,8 @@ def register(ctx):
             )
     except Exception as exc:
         logger.warning("docfoo_plugin: skill registration failed: %s", exc)
+    try:
+        ctx.register_hook("pre_gateway_dispatch", _on_pre_gateway_dispatch)
+    except Exception as exc:
+        logger.warning("docfoo_plugin: gateway dispatch hook registration failed: %s", exc)
     install_wrapper()
