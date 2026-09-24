@@ -2,11 +2,11 @@
 
 Barebones, scriptable DocFoo for the shell and for agents (Hermes/Slack).
 
-> **Status:** Stages 1–4 complete — skeleton, bundled Pi sidecar, `model`/`auth`,
-> `kg --index/--query/--status` with rich JSON and Slack output, read-only
-> `resources`/`notes`, local `backup`/`restore`, community
-> `collections --download`, and `scan` + `setup`. Stage 5 (packaging,
-> `update`, `docs/HERMES.md`) is pending. See `PLAN.md` for the details.
+> **Status:** Stages 1–5 complete — skeleton, bundled Pi sidecar, `model`/`auth`,
+> `kg`, read-only `resources`/`notes`, `backup`/`restore`, `collections`,
+> `scan` + `setup`, and packaging (`install.sh`, `update`, completions).
+> Stage 6 (hardening and end-to-end acceptance) is pending. See `PLAN.md` and
+> `docs/HERMES.md`.
 
 ## Build
 
@@ -183,6 +183,32 @@ Errors use the same envelope with `"ok": false` and an `error` object carrying a
 stable `code` (`usage`, `not_found`, `not_implemented`, `io`, `json`, `error`).
 Human mode writes errors to stderr. Exit codes: `0` success, `1` runtime error,
 `2` usage error.
+
+## Install and update
+
+```bash
+# Linux/WSL: install the latest release into ~/.local/bin
+./install.sh                 # or --local to build from this checkout
+
+# Check for or install a newer release
+docfoo update --check
+docfoo update
+
+# Shell completions
+docfoo completions bash        # bash | zsh | fish | powershell | elvish
+```
+
+Release artifacts are `docfoo-<version>-linux-x64.tar.gz` and
+`docfoo-<version>-windows-x64.zip` plus `.sha256` sidecars; `scripts/release.sh`
+and `scripts/release.ps1` build them locally. Set `DOCFOO_REPO` to your GitHub
+`owner/repo` before releasing.
+
+## Hermes (Slack)
+
+See [`docs/HERMES.md`](docs/HERMES.md) for the full guide: the recommended
+`platforms.slack.extra.rich_blocks: true` config, the `--hermes-final`
+`[[hermes:final]]` sentinel, the ~10-line Hermes patch that turns a tool result
+into the final Slack answer, and example question → command mappings.
 
 ## Roadmap
 

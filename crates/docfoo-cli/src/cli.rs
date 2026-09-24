@@ -101,6 +101,8 @@ pub enum Command {
     Version(VersionArgs),
     /// Check for or install updates
     Update(UpdateArgs),
+    /// Print a shell completion script
+    Completions(CompletionsArgs),
 }
 
 impl Command {
@@ -118,6 +120,7 @@ impl Command {
             Command::Setup(_) => "setup",
             Command::Version(_) => "version",
             Command::Update(_) => "update",
+            Command::Completions(_) => "completions",
         }
     }
 }
@@ -361,4 +364,11 @@ pub struct UpdateArgs {
     /// Only check for a newer version
     #[arg(long)]
     pub check: bool,
+}
+
+#[derive(Debug, Args)]
+pub struct CompletionsArgs {
+    /// Shell to generate completions for
+    #[arg(value_enum)]
+    pub shell: clap_complete::Shell,
 }

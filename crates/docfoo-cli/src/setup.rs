@@ -8,14 +8,13 @@
 //!   - reports the effective paths, honoring the `DOCFOO_LAYOUT_MODEL`,
 //!     `DOCFOO_ORT_DLL` and `DOCFOO_PDFIUM_DLL` overrides the pipeline uses.
 
-use std::io::Read;
 use std::path::{Path, PathBuf};
 use std::time::Duration;
 
 use serde_json::{json, Value};
-use sha2::Digest;
 
 use crate::error::{CliError, Result};
+use crate::util::sha256_file;
 use crate::workspace::Workspace;
 
 /// ONNX Runtime 1.28.0 — the same version as the Windows DLL the app bundles.
@@ -201,24 +200,6 @@ fn download_to(url: &str, destination: &Path) -> Result<()> {
     std::io::copy(&mut reader, &mut file)
         .map_err(|error| CliError::Message(format!("download failed: {error}")))?;
     Ok(())
-}
-
-fn sha256_file(path: &Path) -> Result<String> {
-    let mut file = std::fs::File::open(path)?;
-    let mut hasher = sha2::Sha256::new();
-    let mut buffer = vec![0u8; 64 * 1024];
-    loop {
-        let read = file.read(&mut buffer)?;
-        if read == 0 {
-            break;
-        }
-        hasher.update(&buffer[..read]);
-    }
-    Ok(hasher
-        .finalize()
-        .iter()
-        .map(|byte| format!("{byte:02x}"))
-        .collect())
 }
 
 /// Download a tarball, verify its checksum, and extract one member to

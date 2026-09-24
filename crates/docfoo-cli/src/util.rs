@@ -1,9 +1,11 @@
 //! Small filesystem helpers shared by config, KG, backup and collections.
 
+use std::io::Read;
 use std::path::{Component, Path, PathBuf};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use serde_json::Value;
+use sha2::Digest;
 
 use crate::error::Result;
 
@@ -43,6 +45,25 @@ pub fn now_ms() -> u64 {
 /// Non-fatal failure report (the CLI has no UI to surface these).
 pub fn report(context: &str, error: impl std::fmt::Display) {
     eprintln!("warning: {context}: {error}");
+}
+
+/// Lowercase hex SHA-256 of a file's contents.
+pub fn sha256_file(path: &Path) -> Result<String> {
+    let mut file = std::fs::File::open(path)?;
+    let mut hasher = sha2::Sha256::new();
+    let mut buffer = vec![0u8; 64 * 1024];
+    loop {
+        let read = file.read(&mut buffer)?;
+        if read == 0 {
+            break;
+        }
+        hasher.update(&buffer[..read]);
+    }
+    Ok(hasher
+        .finalize()
+        .iter()
+        .map(|byte| format!("{byte:02x}"))
+        .collect())
 }
 
 /// True when `rel` is a safe relative path: non-empty, no `..`/`.` segments,

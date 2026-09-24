@@ -23,5 +23,6 @@ pub mod resources;
 pub mod scan;
 pub mod setup;
 pub mod sidecar;
+pub mod update;
 pub mod util;
 pub mod workspace;

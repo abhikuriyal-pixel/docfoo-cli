@@ -339,6 +339,99 @@ fn auth_logout_reports_success() {
 }
 
 #[test]
+fn completions_bash_prints_a_script() {
+    let output = docfoo()
+        .args(["completions", "bash"])
+        .output()
+        .expect("run docfoo");
+    assert!(output.status.success());
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.contains("docfoo"), "stdout: {stdout}");
+    assert!(stdout.contains("complete"), "stdout: {stdout}");
+}
+
+/// A one-shot HTTP server that answers the update check with a GitHub-style
+/// release body, then exits.
+fn spawn_mock_release_server(asset_name: &str) -> (String, std::thread::JoinHandle<()>) {
+    use std::io::{Read as _, Write as _};
+    let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+    let address = listener.local_addr().unwrap();
+    let asset = asset_name.to_string();
+    let handle = std::thread::spawn(move || {
+        let (mut stream, _) = listener.accept().unwrap();
+        let mut buffer = [0u8; 4096];
+        let _ = stream.read(&mut buffer);
+        let body = serde_json::json!({
+            "tag_name": "v9.9.9",
+            "assets": [
+                { "name": asset, "browser_download_url": "http://example.com/a" },
+                { "name": format!("{asset}.sha256"), "browser_download_url": "http://example.com/a.sha256" }
+            ]
+        })
+        .to_string();
+        let response = format!(
+            "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
+            body.len(),
+            body
+        );
+        let _ = stream.write_all(response.as_bytes());
+    });
+    (format!("http://{address}/releases/latest"), handle)
+}
+
+#[test]
+fn update_check_reports_a_newer_release() {
+    let suffix = if cfg!(windows) { ".zip" } else { ".tar.gz" };
+    let asset = format!(
+        "docfoo-9.9.9-{}{suffix}",
+        docfoo_cli::update::platform_tag()
+    );
+    let (url, handle) = spawn_mock_release_server(&asset);
+    let output = docfoo()
+        .env("DOCFOO_UPDATE_API_URL", url)
+        .args(["update", "--check", "--json"])
+        .output()
+        .expect("run docfoo");
+    handle.join().unwrap();
+    assert!(
+        output.status.success(),
+        "stderr: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let value: serde_json::Value =
+        serde_json::from_slice(&output.stdout).expect("json envelope");
+    assert_eq!(value["command"], "update");
+    assert_eq!(value["data"]["updateAvailable"], true);
+    assert_eq!(value["data"]["latest"], "9.9.9");
+    assert_eq!(value["data"]["asset"], asset);
+}
+
+#[test]
+fn update_check_error_path_is_clean() {
+    let output = docfoo()
+        .env("DOCFOO_UPDATE_API_URL", "http://127.0.0.1:1/releases/latest")
+        .args(["update", "--check"])
+        .output()
+        .expect("run docfoo");
+    assert_eq!(output.status.code(), Some(1));
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(stderr.contains("update check failed"), "stderr: {stderr}");
+}
+
+#[test]
+fn version_verbose_mentions_the_sidecar() {
+    let temp = tempfile::tempdir().unwrap();
+    let output = docfoo()
+        .args(["version", "--verbose", "--workspace"])
+        .arg(temp.path())
+        .output()
+        .expect("run docfoo");
+    assert!(output.status.success());
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.contains("sidecar:"), "stdout: {stdout}");
+}
+
+#[test]
 fn missing_sidecar_reports_a_build_hint() {
     let temp = tempfile::tempdir().unwrap();
     let output = docfoo()
