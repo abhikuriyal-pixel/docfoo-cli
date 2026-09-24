@@ -14,6 +14,8 @@ mod model;
 mod notes;
 mod resources;
 mod restore;
+mod scan;
+mod setup;
 mod version;
 
 pub fn dispatch(cli: &Cli, format: OutputFormat, workspace: &Workspace) -> Result<()> {
@@ -27,12 +29,8 @@ pub fn dispatch(cli: &Cli, format: OutputFormat, workspace: &Workspace) -> Resul
         Command::Backup(args) => backup::run(format, workspace, args),
         Command::Restore(args) => restore::run(format, workspace, args),
         Command::Collections(args) => collections::run(format, workspace, args),
-        Command::Scan(_) => Err(CliError::NotImplemented(
-            "scan is not implemented yet (Stage 4)".to_string(),
-        )),
-        Command::Setup(_) => Err(CliError::NotImplemented(
-            "setup is not implemented yet (Stage 4)".to_string(),
-        )),
+        Command::Scan(args) => scan::run(cli, format, workspace, args),
+        Command::Setup(args) => setup::run(format, workspace, args),
         Command::Update(_) => Err(CliError::NotImplemented(
             "update is not implemented yet (Stage 5)".to_string(),
         )),

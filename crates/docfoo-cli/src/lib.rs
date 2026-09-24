@@ -20,6 +20,8 @@ pub mod notes;
 pub mod output;
 pub mod render;
 pub mod resources;
+pub mod scan;
+pub mod setup;
 pub mod sidecar;
 pub mod util;
 pub mod workspace;

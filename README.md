@@ -2,11 +2,11 @@
 
 Barebones, scriptable DocFoo for the shell and for agents (Hermes/Slack).
 
-> **Status:** Stages 1–3 complete — skeleton, bundled Pi sidecar, `model`/`auth`,
+> **Status:** Stages 1–4 complete — skeleton, bundled Pi sidecar, `model`/`auth`,
 > `kg --index/--query/--status` with rich JSON and Slack output, read-only
-> `resources`/`notes`, local `backup`/`restore`, and community
-> `collections --download`. Stages 4–6 (scan/setup, packaging) are pending.
-> See `PLAN.md` for the architecture and stage breakdown.
+> `resources`/`notes`, local `backup`/`restore`, community
+> `collections --download`, and `scan` + `setup`. Stage 5 (packaging,
+> `update`, `docs/HERMES.md`) is pending. See `PLAN.md` for the details.
 
 ## Build
 
@@ -124,6 +124,25 @@ directions. Restore stages the archive, snapshots the live data, swaps it in
 atomically, and keeps a journal so an interrupted restore rolls back on the
 next run.
 
+### Scan and setup
+
+```bash
+# Provision scan's native dependencies (Linux downloads pinned, checksummed
+# ONNX Runtime 1.28.0 + PDFium 151.0.7881.0; --from copies the layout model
+# from a local DocFoo models/ folder and, on Windows, its DLLs)
+docfoo setup [--check] [--from DIR] [--layout-model-url URL] [--force] [--json]
+
+# OCR a PDF or image into resources/<destination>/<stem>/
+docfoo scan FILE [--parallel N] [--text_model KEY] [--figure_model KEY]
+                [--output DEST] [--pages 1,2,3] [--prompt TEXT]
+                [--analysis-prompt TEXT] [--no-figures] [--json]
+```
+
+`--figure_model` defaults to `--text_model`; `--no-figures` disables figure and
+table analysis (asset crops are still saved). The effective native paths honor
+`DOCFOO_LAYOUT_MODEL`, `DOCFOO_ORT_DLL` and `DOCFOO_PDFIUM_DLL`, and
+`DOCFOO_MODELS_DIR` overrides the models cache location.
+
 Global flags: `--workspace DIR`, `--json`, `--format markdown|slack|json`,
 `--quiet`, `--verbose`, `--no-color`.
 
@@ -167,5 +186,6 @@ Human mode writes errors to stderr. Exit codes: `0` success, `1` runtime error,
 
 ## Roadmap
 
-See `PLAN.md`. Stage 4 adds `scan` plus `setup`; Stage 5 packaging, `update`,
-and `docs/HERMES.md`.
+See `PLAN.md`. Stage 5 adds packaging (`install.sh`, release tarballs),
+`docfoo update`, and `docs/HERMES.md`; Stage 6 hardens and runs the end-to-end
+acceptance.

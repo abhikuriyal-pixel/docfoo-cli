@@ -177,10 +177,10 @@ pub struct ScanArgs {
     #[arg(long, value_name = "N")]
     pub parallel: Option<usize>,
     /// OCR model key
-    #[arg(long, value_name = "KEY")]
+    #[arg(long = "text_model", alias = "text-model", value_name = "KEY")]
     pub text_model: Option<String>,
     /// Figure/table analysis model key (defaults to --text_model)
-    #[arg(long, value_name = "KEY")]
+    #[arg(long = "figure_model", alias = "figure-model", value_name = "KEY")]
     pub figure_model: Option<String>,
     /// Destination folder under resources/
     #[arg(long, value_name = "DIR")]
@@ -338,9 +338,12 @@ pub struct SetupArgs {
     /// Only check what is missing
     #[arg(long)]
     pub check: bool,
-    /// Copy the layout model from a local DocFoo models directory
+    /// Copy the layout model (and Windows DLLs) from a local DocFoo models directory
     #[arg(long, value_name = "DIR")]
     pub from: Option<PathBuf>,
+    /// Download the layout model from this URL when --from is not given
+    #[arg(long, value_name = "URL")]
+    pub layout_model_url: Option<String>,
     /// Re-download/re-copy even when present
     #[arg(long)]
     pub force: bool,
