@@ -110,11 +110,10 @@ pub struct SlackOptions<'a> {
 /// Render an answer for Slack: `MEDIA:` figures, optional bullet tables and a
 /// Sources section, then the optional `[[hermes:final]]` sentinel.
 pub fn render_slack(answer: &str, sources: &[Value], options: &SlackOptions) -> String {
-    let normalized = normalize_tables(answer);
     let mut body = if options.plain_tables {
-        convert_tables(&normalized)
+        convert_tables(answer)
     } else {
-        normalized
+        answer.to_string()
     };
     body = convert_figures(&body, options.resources_dir);
     body = convert_math(&body);
@@ -384,7 +383,7 @@ fn latex_to_text(latex: &str) -> String {
     }
     s = convert_scripts(&s);
     s = strip_backslashes(&s);
-    s.replace(['{', '}'], "")
+    s.replace('{', "").replace('}', "")
 }
 
 /// `\cmd{inner}` -> `prefix + inner + suffix` (nested groups included).
@@ -720,46 +719,6 @@ fn convert_tables(text: &str) -> String {
     out.join("\n").trim_end().to_string()
 }
 
-/// Insert a GFM separator row after the header of any pipe table that lacks
-/// one: models often emit `| a | b |` + rows without the `|---|---|` line, and
-/// Slack's table renderer (and our `--plain-tables`) needs it.
-fn normalize_tables(text: &str) -> String {
-    let lines: Vec<&str> = text.lines().collect();
-    let mut out: Vec<String> = Vec::with_capacity(lines.len());
-    let mut in_run = false;
-    for (index, line) in lines.iter().enumerate() {
-        let row = is_table_row(line);
-        let separator = is_table_separator(line);
-        if row && !in_run {
-            out.push(line.to_string());
-            if index + 1 < lines.len()
-                && is_table_row(lines[index + 1])
-                && !is_table_separator(lines[index + 1])
-            {
-                let columns = parse_row(line).len().max(1);
-                out.push(format!("|{}", " --- |".repeat(columns)));
-            }
-            in_run = true;
-            continue;
-        }
-        if in_run && (row || separator) {
-            out.push(line.to_string());
-            continue;
-        }
-        in_run = false;
-        out.push(line.to_string());
-    }
-    out.join("\n")
-}
-
-fn is_table_row(line: &str) -> bool {
-    let trimmed = line.trim();
-    trimmed.starts_with('|')
-        && trimmed.ends_with('|')
-        && trimmed.matches('|').count() >= 2
-        && !is_table_separator(trimmed)
-}
-
 fn is_table_separator(line: &str) -> bool {
     let trimmed = line.trim();
     if !trimmed.contains('|') {
@@ -871,19 +830,6 @@ mod tests {
         // markdown link text is left alone
         let link = convert_citations("See [paper.md](https://example.com).");
         assert_eq!(link, "See [paper.md](https://example.com).");
-    }
-
-    #[test]
-    fn tables_without_a_separator_gain_one() {
-        let input = "| A | B |\n| 1 | 2 |\n| 3 | 4 |\n";
-        assert_eq!(
-            normalize_tables(input),
-            "| A | B |\n| --- | --- |\n| 1 | 2 |\n| 3 | 4 |"
-        );
-        let separated = "| A | B |\n| --- | --- |\n| 1 | 2 |";
-        assert_eq!(normalize_tables(separated), separated);
-        // prose with a single pipe is not a table
-        assert_eq!(normalize_tables("a | b"), "a | b");
     }
 
     #[test]
