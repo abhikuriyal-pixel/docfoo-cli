@@ -1,19 +1,17 @@
 """docfoo_plugin — DocFoo CLI integration for Hermes.
 
-Three parts:
+Parts:
 
-1. A **system prompt section** telling the model to answer questions about the
-   user's documents with the ``docfoo`` CLI and relay the output verbatim.
-2. A plugin-scoped **skill** (``docfoo_plugin:docfoo``) with the full command
-   reference, loaded on demand.
-3. A ``run_tool_round`` wrapper so a tool result starting with
+1. A **direct trigger route**: a message containing the word ``dofoq``
+   (case-insensitive) is answered by the CLI directly, before the model runs.
+2. A ``run_tool_round`` wrapper so a tool result starting with
    ``[[hermes:final]]`` becomes the final answer instead of being sent back to
-   the model for a paraphrase — the same terminate semantics DocFoo's Buddy
-   uses for ``query_kg``.
+   the model for a paraphrase.
+3. A plugin-scoped skill (``docfoo_plugin:docfoo``) with the CLI reference,
+   loaded only on explicit request.
 
 Installed under ``~/.hermes/plugins/docfoo_plugin/`` so ``hermes update``
-never touches it. If a future Hermes renames ``run_tool_round``, the wrapper
-simply stops applying; the sentinel is ignored and the turn still completes.
+never touches it.
 """
 
 from __future__ import annotations
@@ -31,7 +29,6 @@ SENTINEL = "[[hermes:final]]"
 PLUGIN_DIR = Path(__file__).resolve().parent
 CONFIG_PATH = PLUGIN_DIR / "config.json"
 SKILL_PATH = PLUGIN_DIR / "SKILL.md"
-SECTION_ID = "docfoo.cli"
 DEFAULT_BIN = "docfoo"
 DEFAULT_TRIGGER = "dofoq"
 
@@ -51,19 +48,6 @@ def load_config() -> dict:
         "scope": str(data.get("scope") or "").strip(),
         "trigger": str(data.get("trigger") if data.get("trigger") is not None else DEFAULT_TRIGGER).strip(),
     }
-
-
-def query_command(cfg: dict) -> str:
-    parts = [cfg["bin"]]
-    if cfg["workspace"]:
-        parts += ["--workspace", cfg["workspace"]]
-    parts += ["kg", "--query", '"<question>"']
-    if cfg["scope"]:
-        parts += ["--scope", cfg["scope"]]
-    if cfg["model"]:
-        parts += ["--model", cfg["model"]]
-    parts += ["--format", "slack", "--hermes-final"]
-    return " ".join(parts)
 
 
 # --- direct trigger route ---------------------------------------------------
@@ -185,35 +169,6 @@ def _on_pre_gateway_dispatch(event=None, gateway=None, session_store=None, **kwa
     return {"action": "skip", "reason": "dofoq trigger route"}
 
 
-def section_content(cfg: dict) -> str:
-    if cfg["scope"]:
-        scope_note = (
-            f"The configured scope is `{cfg['scope']}`; for a different document pass "
-            "`--scope <resource-folder>` instead (list them with `docfoo resources --list --json`), "
-            "or omit `--scope` for the whole library. "
-        )
-    else:
-        scope_note = (
-            "Pass `--scope <resource-folder>` to focus on one document "
-            "(`docfoo resources --list --json` lists them). "
-        )
-    return (
-        "## DocFoo document library\n"
-        "The user's own documents (papers, PDFs, notes) live in a DocFoo library that you can "
-        "query with the `docfoo` CLI through the terminal tool. For any question about the "
-        "user's documents, run:\n\n"
-        f"    {query_command(cfg)}\n\n"
-        "stdout is the complete, Slack-ready answer (figures as `MEDIA:` lines, tables, exact "
-        "citations, `Sources:`). Output it verbatim as your final message: do not paraphrase, "
-        "summarize, translate, reorder or add commentary; keep `MEDIA:` lines exactly where they "
-        "are. Do not answer from memory or from earlier context — run the command for each "
-        "question. If the command fails, report its error text.\n"
-        + scope_note
-        + "For other library tasks (outline, search, read a section, notes, backups, indexing, "
-        'collections), load the full reference: skill_view("docfoo_plugin:docfoo").'
-    )
-
-
 def _sentinel_payload(text):
     if not isinstance(text, str):
         return None
@@ -318,11 +273,6 @@ def install_wrapper() -> bool:
 
 
 def register(ctx):
-    cfg = load_config()
-    try:
-        ctx.register_system_prompt_section(SECTION_ID, section_content(cfg))
-    except Exception as exc:
-        logger.warning("docfoo_plugin: system prompt section registration failed: %s", exc)
     try:
         if SKILL_PATH.is_file():
             ctx.register_skill(

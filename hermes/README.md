@@ -3,9 +3,6 @@
 The plugin is the entire Hermes integration — no skill install, no
 `soul.md`/persona edit, no core patch. It registers:
 
-- a **system prompt section** (`docfoo.cli`) that routes questions about the
-  user's documents to the `docfoo` CLI and requires stdout to be relayed
-  verbatim;
 - a **plugin-scoped skill** (`docfoo_plugin:docfoo`) with the full command
   reference (resources, notes, backups, collections, indexing, scanning);
 - a **`run_tool_round` wrapper** so a tool result carrying the

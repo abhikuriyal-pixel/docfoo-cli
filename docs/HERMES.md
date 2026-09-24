@@ -69,26 +69,23 @@ but costs one extra turn.
 The plugin is the entire Hermes integration — no skill install, no
 `soul.md`/persona edit, no core patch. At load time it registers three things:
 
-1. **A system prompt section** (`docfoo.cli`) that tells the model, whenever a
-   question is about the user's documents, to run the CLI and relay stdout
-   verbatim. It embeds the exact command, built from `config.json`.
-2. **A plugin-scoped skill** (`docfoo_plugin:docfoo`, via `skill_view`) with
-   the full command reference — resources, notes, backups, collections,
-   indexing, scanning.
-3. **A `run_tool_round` wrapper** so a tool result carrying the
-   `[[hermes:final]]` sentinel ends the turn with that text: Hermes never
-   makes the second (paraphrase) model call. It unwraps Hermes' terminal
-   envelope `{"output": "...", "exit_code": 0, "error": null}` as well as
-   plain-string tool results.
-4. **A direct trigger route**: any message containing the word `dofoq`
-   (case-insensitive: `dofoq`, `Dofoq`, `DoFoq`, …) is intercepted by a
-   `pre_gateway_dispatch` hook and answered by the CLI directly. The message
-   never reaches the model, so the only latency left is docfoo's synthesis
-   (~6s instead of ~12-19s). The reply goes through the platform adapter with
+1. **A direct trigger route** — the only query path. Any message containing
+   the word `dofoq` (case-insensitive: `dofoq`, `Dofoq`, `DoFoq`, …) is
+   intercepted by a `pre_gateway_dispatch` hook and answered by the CLI
+   directly. The message never reaches the model, so the only latency left is
+   docfoo's synthesis (~6s). The reply goes through the platform adapter with
    the same typing indicator, markdown and `MEDIA:` figure handling as a
-   normal answer; authorization is still enforced. Ordinary mentions of
-   docfoo ("change docfoo's model", "scan this pdf with docfoo") do not
-   trigger it and go to Hermes normally.
+   normal answer; authorization is still enforced.
+2. **A `run_tool_round` wrapper** so a tool result carrying the
+   `[[hermes:final]]` sentinel ends the turn with that text — used whenever
+   Hermes is explicitly asked to run docfoo. It unwraps Hermes' terminal
+   envelope `{"output": "...", "exit_code": 0, "error": null}`.
+3. **A plugin-scoped skill** (`docfoo_plugin:docfoo`, via `skill_view`) with
+   the full command reference — explicit loads only.
+
+There is deliberately **no system prompt section**: the model is never told to
+query docfoo on its own, so ordinary mentions ("change docfoo's model", "scan
+this pdf with docfoo") go to Hermes as normal.
 
 Install it once (cross-platform, pure Python):
 
