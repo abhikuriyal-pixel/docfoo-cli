@@ -171,6 +171,36 @@ systemctl --user enable --now docfoo-sidecar
 Override the socket with `DOCFOO_SIDECAR_SOCKET`; default is
 `<workspace>/.agent/sidecar.sock` (`WS/.agent/sidecar.sock`).
 
+### Custom providers (example: Inception)
+
+Pi reads `<workspace>/.agent/models.json`; any OpenAI-compatible endpoint can
+be added there. The API key can interpolate an environment variable:
+
+```json
+"inception": {
+  "name": "Inception",
+  "baseUrl": "https://api.inceptionlabs.ai/v1",
+  "api": "openai-completions",
+  "apiKey": "$INCEPTION_API_KEY",
+  "models": [{
+    "id": "mercury-2.5", "name": "Mercury 2.5", "reasoning": true,
+    "input": ["text"], "contextWindow": 260000, "maxTokens": 8192,
+    "compat": { "supportsReasoningEffort": true, "maxTokensField": "max_completion_tokens" },
+    "thinkingLevelMap": { "off": null, "minimal": "low", "low": "low",
+                          "medium": "medium", "high": "high", "xhigh": "high", "max": "high" },
+    "samplingParams": { "temperature": 0.75 }
+  }]
+}
+```
+
+The systemd sidecar loads `~/.config/systemd/user/docfoo-sidecar.env`
+(mode 600) — put `INCEPTION_API_KEY=…` there and
+`systemctl --user restart docfoo-sidecar`. Windows user variables are **not**
+visible in WSL; copy the value once, e.g.
+`[Environment]::GetEnvironmentVariable('INCEPTION_API_KEY','User')`.
+Then `docfoo model --set kg inception/mercury-2.5` and use `--reasoning off`
+(fastest) or `medium` (sends `reasoning_effort`).
+
 ### Manual fallback (no plugin system)
 
 If plugins cannot load, patch `agent/turn_tool_round.py` in `run_tool_round()`

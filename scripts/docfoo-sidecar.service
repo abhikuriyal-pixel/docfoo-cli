@@ -5,6 +5,9 @@ After=network-online.target
 
 [Service]
 Type=simple
+# Optional: INCEPTION_API_KEY=... (or any provider key referenced as
+# "$VAR" in <workspace>/.agent/models.json).
+EnvironmentFile=-%h/.config/systemd/user/docfoo-sidecar.env
 # The workspace's .agent dir holds auth.json/models.json/models-store.json.
 # Change this if your workspace is not ~/.docfoo.
 Environment=DOCFOO_AGENT_DIR=%h/.docfoo/.agent
