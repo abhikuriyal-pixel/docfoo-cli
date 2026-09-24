@@ -80,8 +80,11 @@ The plugin is the entire Hermes integration — no skill install, no
    `[[hermes:final]]` sentinel ends the turn with that text — used whenever
    Hermes is explicitly asked to run docfoo. It unwraps Hermes' terminal
    envelope `{"output": "...", "exit_code": 0, "error": null}`.
-3. **A plugin-scoped skill** (`docfoo_plugin:docfoo`, via `skill_view`) with
-   the full command reference — explicit loads only.
+3. **An advertised skill** (`~/.hermes/skills/docfoo/SKILL.md`, installed by
+   the same command) that tells the model `docfoo` is on PATH
+   (`~/.local/bin/docfoo`) with workspace `~/.docfoo`, how to inspect and
+   configure it, and never to search the filesystem or run `kg --query` on its
+   own.
 
 There is deliberately **no system prompt section**: the model is never told to
 query docfoo on its own, so ordinary mentions ("change docfoo's model", "scan

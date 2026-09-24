@@ -1,29 +1,31 @@
 ---
 name: docfoo
-description: DocFoo CLI reference — query the user's document library and use the other library commands.
+description: Inspect and configure the docfoo CLI — models, auth, resources, backups, scanning. docfoo is on PATH; never search the filesystem for it.
 ---
 
 # DocFoo CLI
 
-`docfoo` works on the user's DocFoo library (a workspace directory holding
-`resources/`, `graphs/` and notes). The binaries are installed; no setup is
-needed.
+`docfoo` is installed at `~/.local/bin/docfoo` (on PATH). Its workspace —
+`model-selection.json`, `resources/`, `graphs/` — is `~/.docfoo`. Run it
+directly; never search the filesystem for it.
 
-## Ask a question (main path)
+## Configuration (models, auth)
 
 ```bash
-docfoo [--workspace DIR] kg --query "<question>" --format slack --hermes-final [--model PROVIDER/MODEL]
+docfoo model --get kg --json          # one slot: chat, scan, scan-analysis, kg
+docfoo model --list --json            # model catalog for configured providers
+docfoo model --set kg opencode-go/muse-spark-1.2-contributor
+docfoo auth --status --json
 ```
 
-- stdout is the final, Slack-ready answer: figures as `MEDIA:/abs/path`
-  lines, GFM tables, inline citations and a `Sources:` section. Relay it
-  verbatim.
-- `--scope <dir>` limits retrieval to one resource folder.
-- `--json` returns the machine envelope instead (`answer_markdown`,
-  `citations`, `figures`, `tables`, `sources`).
-- Without `--hermes-final` the answer is plain markdown (no sentinel).
+All four slots at once: `cat ~/.docfoo/model-selection.json` (keys
+`chatModelKey`, `kgModelKey`, `scanModelKey`, `scanAnalysisModelKey`).
 
-If no graph exists yet, index once: `docfoo kg --index [--scope DIR]`.
+## Document Q&A
+
+Never run `docfoo kg --query` on your own. Document questions reach the CLI
+only when the user prefixes the message with `dofoq`, and that path is handled
+outside the agent. Run `kg --query` only if the user explicitly asks you to.
 
 ## Browse the library
 
@@ -43,15 +45,12 @@ docfoo backup --out /tmp/docfoo-backup.zip --json
 docfoo restore /tmp/docfoo-backup.zip --json
 docfoo collections --list --json
 docfoo collections --download <id> --json
-docfoo model --get kg --json
-docfoo auth --status --json
 docfoo scan <file.pdf|image.png> --parallel 4 --json
 ```
 
 ## Rules
 
-- Questions about the user's documents: always run `docfoo kg --query`; never
-  answer from memory or earlier context.
-- Output the CLI result verbatim; do not add commentary or reorder sections.
-- Keep `MEDIA:` lines exactly as they are.
+- Configuration, auth and library questions: run `docfoo` from PATH. Do not
+  search the filesystem, and do not run `ls`/`find` to locate it.
+- Never run `docfoo kg --query` unless the user explicitly asks.
 - If a command fails, report its error text.

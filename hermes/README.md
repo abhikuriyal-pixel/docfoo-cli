@@ -3,8 +3,10 @@
 The plugin is the entire Hermes integration — no skill install, no
 `soul.md`/persona edit, no core patch. It registers:
 
-- a **plugin-scoped skill** (`docfoo_plugin:docfoo`) with the full command
-  reference (resources, notes, backups, collections, indexing, scanning);
+- an **advertised skill** (`<hermes-home>/skills/docfoo/SKILL.md`) that tells
+  Hermes the CLI is on PATH (`~/.local/bin/docfoo`) with workspace `~/.docfoo`
+  and how to inspect/configure it — so it runs `docfoo` instead of searching
+  the filesystem;
 - a **`run_tool_round` wrapper** so a tool result carrying the
   `[[hermes:final]]` sentinel ends the turn with that text — Hermes never
   makes the second (paraphrase) model call. It unwraps Hermes' terminal
@@ -33,9 +35,9 @@ python3 hermes/install.py --no-enable   # copy only (enable manually)
 ```
 
 The installer writes `<HERMES_HOME>/plugins/docfoo_plugin/` (default
-`~/.hermes`) and runs `hermes plugins enable docfoo_plugin
---no-allow-tool-override`. **Restart the Hermes gateway afterwards** so a
-running process picks up the new plugin.
+`~/.hermes`) and the skill `<HERMES_HOME>/skills/docfoo/SKILL.md`, then runs
+`hermes plugins enable docfoo_plugin --no-allow-tool-override`. **Restart the
+Hermes gateway afterwards** so a running process picks up the new plugin.
 
 ## Direct trigger route (no model call)
 
