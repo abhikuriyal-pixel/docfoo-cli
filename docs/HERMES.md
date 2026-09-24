@@ -201,6 +201,20 @@ visible in WSL; copy the value once, e.g.
 Then `docfoo model --set kg inception/mercury-2.5` and use `--reasoning off`
 (fastest) or `medium` (sends `reasoning_effort`).
 
+### Bundled provider extensions
+
+The sidecar binary also compiles in Pi provider extensions. `pi-inferx-provider`
+adds **InferX** (`https://model.inferx.net`, OpenAI/vLLM-compatible) with live
+`/v1/models` discovery, a public-catalog fallback, and vLLM role/thinking
+shims; it reads `INFERX_API_KEY` (put it in the same `docfoo-sidecar.env` and
+restart the service). Refresh catalogs on demand with:
+
+```bash
+docfoo model --list --refresh            # network refresh, then list
+docfoo model --list --provider inferx    # just its models
+docfoo model --set kg inferx/<model>
+```
+
 ### Manual fallback (no plugin system)
 
 If plugins cannot load, patch `agent/turn_tool_round.py` in `run_tool_round()`

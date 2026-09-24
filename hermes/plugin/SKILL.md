@@ -14,6 +14,7 @@ directly; never search the filesystem for it.
 ```bash
 docfoo model --get kg --json          # one slot: chat, scan, scan-analysis, kg
 docfoo model --list --json            # model catalog for configured providers
+docfoo model --list --refresh --json  # refresh catalogs over the network first
 docfoo model --set kg opencode-go/muse-spark-1.2-contributor
 docfoo auth --status --json
 ```

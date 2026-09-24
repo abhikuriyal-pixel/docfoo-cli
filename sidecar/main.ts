@@ -17,6 +17,7 @@ import { createInterface } from "node:readline";
 import { ModelRuntime } from "@earendil-works/pi-coding-agent";
 import { CompleteService } from "./complete.js";
 import { ProviderService } from "./providers.js";
+import inferxProvider from "pi-inferx-provider/src/index.ts";
 
 const AGENT_DIR = process.env.DOCFOO_AGENT_DIR || join(process.cwd(), ".agent");
 
@@ -87,6 +88,19 @@ async function main(): Promise<void> {
     refreshOnCreate: true,
   });
 
+  // Bundled provider extensions. The extension API surface used here is
+  // narrow: pi-inferx-provider only calls registerProvider(), which
+  // ModelRuntime exposes publicly.
+  try {
+    const piShim = {
+      registerProvider: (providerId: string, config: unknown) =>
+        runtime.registerProvider(providerId, config as never),
+    };
+    await (inferxProvider as unknown as (pi: typeof piShim) => Promise<void>)(piShim);
+  } catch (error) {
+    process.stderr.write(`docfoo-agent: inferx provider failed: ${errorText(error)}\n`);
+  }
+
   const complete = new CompleteService(runtime, emit);
   const providers = new ProviderService(runtime, emit);
 
@@ -101,7 +115,7 @@ async function main(): Promise<void> {
           complete.cancel(request);
           break;
         case "models":
-          await providers.list(requestId);
+          await providers.list(requestId, request.refresh === true);
           break;
         case "auth_status":
           await providers.status(

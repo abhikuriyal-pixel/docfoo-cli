@@ -314,6 +314,9 @@ pub struct ModelArgs {
     /// With --list: only this provider
     #[arg(long, value_name = "PROVIDER")]
     pub provider: Option<String>,
+    /// With --list: refresh model catalogs over the network first
+    #[arg(long)]
+    pub refresh: bool,
 }
 
 #[derive(Debug, Args)]

@@ -62,7 +62,7 @@ fn complete_streams_deltas() {
 #[test]
 fn models_and_auth_status_parse() {
     let client = spawn_with_env(&[]);
-    let providers = client.models().expect("models");
+    let providers = client.models(false).expect("models");
     assert_eq!(providers[0].id, "fake-provider");
     assert_eq!(providers[0].models.len(), 2);
     assert_eq!(providers[0].models[1].id, "other/model");

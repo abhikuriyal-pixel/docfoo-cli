@@ -45,8 +45,15 @@ export class ProviderService {
     private readonly emit: Emit,
   ) {}
 
-  async list(requestId: string): Promise<void> {
+  async list(requestId: string, refresh = false): Promise<void> {
     try {
+      if (refresh) {
+        try {
+          await this.runtime.refresh({ allowNetwork: true, force: true });
+        } catch (error) {
+          process.stderr.write(`docfoo-agent: model refresh failed: ${errorText(error)}\n`);
+        }
+      }
       const providers = await this.rows(true);
       this.emit({ type: "models_response", requestId, success: true, providers });
     } catch (error) {

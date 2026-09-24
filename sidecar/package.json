@@ -6,7 +6,8 @@
   "description": "DocFoo CLI model-completion sidecar (Pi ModelRuntime over JSONL)",
   "dependencies": {
     "@earendil-works/pi-ai": "0.86.1",
-    "@earendil-works/pi-coding-agent": "0.86.1"
+    "@earendil-works/pi-coding-agent": "0.86.1",
+    "pi-inferx-provider": "0.1.2"
   },
   "scripts": {
     "postinstall": "node scripts/dedupe-pi-ai.mjs",

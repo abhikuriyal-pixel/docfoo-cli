@@ -575,8 +575,12 @@ impl SidecarClient {
             .to_string())
     }
 
-    pub fn models(&self) -> std::result::Result<Vec<ProviderInfo>, SidecarError> {
-        let value = self.request(json!({ "type": "models" }), None, None, DEFAULT_TIMEOUT)?;
+    pub fn models(&self, refresh: bool) -> std::result::Result<Vec<ProviderInfo>, SidecarError> {
+        let mut payload = json!({ "type": "models" });
+        if refresh {
+            payload["refresh"] = json!(true);
+        }
+        let value = self.request(payload, None, None, DEFAULT_TIMEOUT)?;
         providers_from(&value)
     }
 

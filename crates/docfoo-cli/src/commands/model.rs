@@ -51,7 +51,7 @@ pub fn run(format: OutputFormat, workspace: &Workspace, args: &ModelArgs) -> Res
     }
 
     let mut sidecar = Sidecar::locate(workspace)?;
-    let providers = sidecar.client()?.models()?;
+    let providers = sidecar.client()?.models(args.refresh)?;
     let filtered: Vec<_> = providers
         .iter()
         .filter(|provider| {
@@ -102,7 +102,7 @@ fn validate_model(workspace: &Workspace, key: &str) -> Result<()> {
         )));
     }
     let mut sidecar = Sidecar::locate(workspace)?;
-    let providers = sidecar.client()?.models()?;
+    let providers = sidecar.client()?.models(false)?;
     let provider = providers
         .iter()
         .find(|provider| provider.id == provider_id)
