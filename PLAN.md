@@ -1,7 +1,8 @@
 # DocFoo CLI — Implementation Plan
 
-> **Status:** Stage 1.1 implemented (command tree, workspace/config, JSON envelope,
-> `version`; 21 tests green). Stages 1.2+ pending. See §7 for the stage breakdown.
+> **Status:** Stage 1.2 implemented (bundled Pi sidecar completion service,
+> `model`/`auth` commands; 45 tests green). Stage 1.3 pending. See §7 for the
+> stage breakdown.
 > **Companion project:** `C:\Users\abhik\Documents\Test\DocFoo` (the Tauri desktop app).
 > **Primary consumer:** Hermes (Slack agent) running in WSL, which invokes `docfoo` commands
 > through its `terminal` tool.
@@ -351,7 +352,7 @@ other after Stage 1.
 
 ### Stage 1 — Foundation + KG vertical slice (primary value)
 
-**Status:** 🟡 1.1 done · 1.2–1.3 pending
+**Status:** 🟡 1.1–1.2 done · 1.3 pending
 
 **Goal:** `docfoo kg --index` and `docfoo kg --query` produce rich, Hermes-ready answers in a
 WSL workspace, using the bundled Pi sidecar for models.

@@ -316,6 +316,9 @@ pub struct AuthArgs {
     /// Show provider auth status
     #[arg(long)]
     pub status: bool,
+    /// With --status: only this provider
+    #[arg(long, value_name = "PROVIDER")]
+    pub provider: Option<String>,
     /// Set an API key: --set PROVIDER [--key KEY]
     #[arg(long, value_name = "PROVIDER")]
     pub set: Option<String>,

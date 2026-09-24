@@ -1,20 +1,9 @@
 //! docfoo — barebones DocFoo CLI.
 
-// Stage 1.1 ships the full command surface and the config/workspace plumbing
-// ahead of their consumers. Remove this allow once Stages 1.2–2 land.
-#![allow(dead_code)]
-
-mod cli;
-mod commands;
-mod config;
-mod error;
-mod output;
-mod util;
-mod workspace;
-
 use clap::Parser;
 
-use cli::Cli;
+use docfoo_cli::cli::Cli;
+use docfoo_cli::{commands, output, workspace};
 
 fn main() {
     let cli = Cli::parse();

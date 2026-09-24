@@ -1,16 +1,20 @@
-//! Command dispatch. Stage 1.1 wires `version` and leaves the rest as clear
-//! "not implemented yet" errors so the CLI surface is stable from day one.
+//! Command dispatch. Stages land one command at a time; everything not wired
+//! yet returns a clear "not implemented" error naming its stage.
 
 use crate::cli::{Cli, Command};
 use crate::error::{CliError, Result};
 use crate::output::OutputFormat;
 use crate::workspace::Workspace;
 
+mod auth;
+mod model;
 mod version;
 
 pub fn dispatch(cli: &Cli, format: OutputFormat, workspace: &Workspace) -> Result<()> {
     match &cli.command {
         Command::Version(args) => version::run(format, workspace, args),
+        Command::Model(args) => model::run(format, workspace, args),
+        Command::Auth(args) => auth::run(format, workspace, args),
         Command::Kg(_) => Err(CliError::NotImplemented(
             "kg is not implemented yet — the model sidecar is not built (Stages 1.2–1.3)"
                 .to_string(),
@@ -32,12 +36,6 @@ pub fn dispatch(cli: &Cli, format: OutputFormat, workspace: &Workspace) -> Resul
         )),
         Command::Collections(_) => Err(CliError::NotImplemented(
             "collections is not implemented yet (Stage 3)".to_string(),
-        )),
-        Command::Model(_) => Err(CliError::NotImplemented(
-            "model is not implemented yet (Stage 1.2)".to_string(),
-        )),
-        Command::Auth(_) => Err(CliError::NotImplemented(
-            "auth is not implemented yet (Stage 1.2)".to_string(),
         )),
         Command::Setup(_) => Err(CliError::NotImplemented(
             "setup is not implemented yet (Stage 4)".to_string(),
