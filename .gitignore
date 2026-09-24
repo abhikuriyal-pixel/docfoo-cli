@@ -1,0 +1,6 @@
+/target
+node_modules/
+sidecar/node_modules/
+sidecar/docfoo-agent
+sidecar/docfoo-agent.exe
+*.log
