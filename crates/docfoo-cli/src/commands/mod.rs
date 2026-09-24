@@ -9,6 +9,8 @@ use crate::workspace::Workspace;
 mod auth;
 mod kg;
 mod model;
+mod notes;
+mod resources;
 mod version;
 
 pub fn dispatch(cli: &Cli, format: OutputFormat, workspace: &Workspace) -> Result<()> {
@@ -17,14 +19,10 @@ pub fn dispatch(cli: &Cli, format: OutputFormat, workspace: &Workspace) -> Resul
         Command::Model(args) => model::run(format, workspace, args),
         Command::Auth(args) => auth::run(format, workspace, args),
         Command::Kg(args) => kg::run(cli, format, workspace, args),
+        Command::Resources(args) => resources::run(format, workspace, args),
+        Command::Notes(args) => notes::run(format, workspace, args),
         Command::Scan(_) => Err(CliError::NotImplemented(
             "scan is not implemented yet (Stage 4)".to_string(),
-        )),
-        Command::Resources(_) => Err(CliError::NotImplemented(
-            "resources is not implemented yet (Stage 2)".to_string(),
-        )),
-        Command::Notes(_) => Err(CliError::NotImplemented(
-            "notes is not implemented yet (Stage 2)".to_string(),
         )),
         Command::Backup(_) => Err(CliError::NotImplemented(
             "backup is not implemented yet (Stage 3)".to_string(),

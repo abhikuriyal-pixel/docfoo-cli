@@ -1,8 +1,8 @@
 # DocFoo CLI — Implementation Plan
 
-> **Status:** Stage 1 complete (1.1–1.3): skeleton, bundled Pi sidecar,
-> `model`/`auth`, and `kg --index/--query/--status` with rich JSON and Slack
-> output; 73 tests green. Stages 2–6 pending. See §7 for the breakdown.
+> **Status:** Stages 1–2 complete: skeleton, bundled Pi sidecar, `model`/`auth`,
+> `kg --index/--query/--status`, and read-only `resources`/`notes`; 96 tests
+> green. Stages 3–6 pending. See §7 for the breakdown.
 > **Companion project:** `C:\Users\abhik\Documents\Test\DocFoo` (the Tauri desktop app).
 > **Primary consumer:** Hermes (Slack agent) running in WSL, which invokes `docfoo` commands
 > through its `terminal` tool.
@@ -447,6 +447,8 @@ The Slack output contains the answer, `MEDIA:/abs/path` figure lines, inline cit
 `Sources:` section — ready for Hermes to relay verbatim.
 
 ### Stage 2 — Resources & notes (read-only)
+
+**Status:** 🟢 done
 
 Deliverables:
 

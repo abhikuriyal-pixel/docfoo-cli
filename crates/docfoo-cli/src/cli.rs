@@ -208,28 +208,31 @@ pub struct ResourcesArgs {
     /// With --list: recurse into folders
     #[arg(long)]
     pub tree: bool,
-    /// With --read: print ready-to-paste figure markdown lines
+    /// With --list: include figure rel paths; with --read: print only figure lines
     #[arg(long)]
     pub figures: bool,
+    /// With --list/--search: list or search this folder instead of the root
+    #[arg(long, value_name = "DIR")]
+    pub rel: Option<String>,
     /// Print a file's text
     #[arg(long, value_name = "REL")]
     pub read: Option<String>,
     /// First line to read (1-based)
     #[arg(long, value_name = "N")]
     pub offset: Option<usize>,
-    /// Maximum lines to read
+    /// Maximum lines to read / hits to return
     #[arg(long, value_name = "N")]
     pub limit: Option<usize>,
-    /// Prefix each line with its number
+    /// Print raw text without line numbers
     #[arg(long)]
-    pub numbered: bool,
+    pub plain: bool,
     /// Print headings with line numbers and figure/table counts
     #[arg(long, value_name = "REL")]
     pub outline: Option<String>,
     /// Search file lines
     #[arg(long, value_name = "QUERY")]
     pub search: Option<String>,
-    /// Context lines around a search hit
+    /// Context lines around a search hit (0-5)
     #[arg(long, value_name = "N")]
     pub context: Option<usize>,
 }

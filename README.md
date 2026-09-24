@@ -2,10 +2,10 @@
 
 Barebones, scriptable DocFoo for the shell and for agents (Hermes/Slack).
 
-> **Status:** Stage 1 complete — skeleton, bundled Pi sidecar, `model`/`auth`,
-> and `kg --index/--query/--status` with rich JSON and Slack output. Stages 2–6
-> (resources/notes, backup/collections, scan/setup, packaging) are pending. See
-> `PLAN.md` for the architecture and stage breakdown.
+> **Status:** Stages 1–2 complete — skeleton, bundled Pi sidecar, `model`/`auth`,
+> `kg --index/--query/--status` with rich JSON and Slack output, and read-only
+> `resources`/`notes`. Stages 3–6 (backup/collections, scan/setup, packaging)
+> are pending. See `PLAN.md` for the architecture and stage breakdown.
 
 ## Build
 
@@ -73,6 +73,36 @@ Query flags: `--scope DIR`, `--model provider/model`, `--reasoning off|minimal|�
 `--stream` (synthesis deltas to stderr), `--save`, `--hermes-final`,
 `--plain-tables`, `--no-sources`, `--quote-sources`, `--max-chars N`.
 
+### Resources and notes (read-only)
+
+```bash
+# One level of the library (folders summarized: files, md, figures, size)
+docfoo resources --list [--rel DIR] [--figures] [--json]
+
+# Full recursive tree with children and figure paths
+docfoo resources --list --tree [--rel DIR] [--json]
+
+# Read a line window (numbered by default, like the agent tools)
+docfoo resources --read card/content.md [--offset N] [--limit N] [--plain] [--json]
+
+# Only the ready-to-paste figure markdown lines
+docfoo resources --read card/content.md --figures
+
+# Headings with line numbers and per-section figure/table counts
+docfoo resources --outline card/content.md [--json]
+
+# Case-insensitive substring search with optional context
+docfoo resources --search "query" [--rel DIR|FILE] [--context 0-5] [--limit N] [--json]
+
+# Notes (read-only)
+docfoo notes --list [--resource card/content.md] [--json]
+docfoo notes --read NOTE_ID [--json]
+```
+
+`--read` output is line-numbered (`NNNNN | text`) so citations stay exact; the
+JSON envelope also carries `text` (plain), `nextOffset`, and the window's
+figures. Nothing in this stage writes to the workspace.
+
 Global flags: `--workspace DIR`, `--json`, `--format markdown|slack|json`,
 `--quiet`, `--verbose`, `--no-color`.
 
@@ -116,6 +146,6 @@ Human mode writes errors to stderr. Exit codes: `0` success, `1` runtime error,
 
 ## Roadmap
 
-See `PLAN.md`. Stage 2 adds read-only `resources`/`notes`; Stage 3 local
-`backup`/`restore` and community `collections --download`; Stage 4 `scan` plus
-`setup`; Stage 5 packaging, `update`, and `docs/HERMES.md`.
+See `PLAN.md`. Stage 3 adds local `backup`/`restore` and community
+`collections --download`; Stage 4 `scan` plus `setup`; Stage 5 packaging,
+`update`, and `docs/HERMES.md`.
