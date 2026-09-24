@@ -1,0 +1,4 @@
+name: docfoo_plugin
+version: 1.0.0
+description: "DocFoo CLI integration: a tool result starting with [[hermes:final]] becomes the final answer (no second model pass)."
+author: DocFoo CLI

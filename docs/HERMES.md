@@ -60,19 +60,44 @@ the answer. Example skill/instruction text:
 > they are. If the command fails, report the error text.
 
 This costs one extra model turn (the model decides to relay), but the content
-is passed through unchanged. For the fastest path, patch Hermes as below.
+is passed through unchanged. For the fastest path, install the plugin below.
 
-## 4. True terminate semantics (the ~10-line Hermes patch)
+## 4. True terminate semantics (`docfoo_plugin`)
 
-Hermes' loop always calls the model again after a tool round
-(`agent/turn_tool_round.py` returns `"continue"`), so a tool result normally
-becomes context rather than the final message. The CLI's
-`[[hermes:final]]` sentinel exists so a small patch can end the turn with the
-tool output.
+Hermes' loop always calls the model again after a tool round, so a tool result
+normally becomes context rather than the final message. The `docfoo_plugin`
+plugin wraps `run_tool_round` so a result starting with `[[hermes:final]]`
+ends the turn with that text — the same `terminate` behavior DocFoo's Buddy
+uses for `query_kg`.
 
-Edit `~/.hermes/hermes-agent/agent/turn_tool_round.py` in `run_tool_round()`,
+Install it once (cross-platform, pure Python):
+
+```bash
+python3 hermes/install.py        # Linux / WSL
+python hermes\install.py         # Windows
+python3 hermes/install.py --check
+python3 hermes/install.py --uninstall
+```
+
+The installer writes `<HERMES_HOME>/plugins/docfoo_plugin/` (default
+`~/.hermes`) and runs `hermes plugins enable docfoo_plugin
+--no-allow-tool-override`. Restart the Hermes gateway afterwards. No core
+files are modified.
+
+**Why a plugin:** `hermes update` is git-based and autostashes/switches
+branches on a dirty tree, so a source patch would need re-application (and can
+conflict) on every update. User plugins live outside the repo and load at
+startup, so this survives updates automatically. If a future Hermes renames
+`run_tool_round`, the wrapper stops applying and the sentinel is simply
+ignored — the turn still completes, just with a paraphrase. See
+`hermes/README.md`.
+
+### Manual fallback (no plugin system)
+
+If plugins cannot load, patch `agent/turn_tool_round.py` in `run_tool_round()`
 right after `agent._execute_tool_calls(...)` and the
-`_incremental_persistence_failed` check (around line 160):
+`_incremental_persistence_failed` check (around line 160), and re-apply after
+every `hermes update`:
 
 ```python
     # --- DocFoo CLI: a tool result marked [[hermes:final]] IS the answer ---
@@ -92,16 +117,12 @@ right after `agent._execute_tool_calls(...)` and the
             return _verdict("break")
 ```
 
-Notes:
-
 - `append_message` and `suppress` are already imported/defined in that module.
 - The patch ends the turn after the tool batch, so Hermes never paraphrases
   the KG answer. Hermes still makes the *first* model call that chooses the
   terminal tool; only the second (rewrite) call is removed.
-- After patching, restart the Hermes gateway. Keep the relay instruction from
-  §3 as a fallback for older sessions.
-- Without the patch, `--hermes-final` is harmless: the sentinel is just the
-  first line of the text.
+- Without the patch/plugin, `--hermes-final` is harmless: the sentinel is just
+  the first line of the text.
 
 ## 5. Figures and media
 

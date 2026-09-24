@@ -203,10 +203,17 @@ and `scripts/release.ps1` build them locally. Set `DOCFOO_REPO` to your GitHub
 
 ## Hermes (Slack)
 
-See [`docs/HERMES.md`](docs/HERMES.md) for the full guide: the recommended
-`platforms.slack.extra.rich_blocks: true` config, the `--hermes-final`
-`[[hermes:final]]` sentinel, the ~10-line Hermes patch that turns a tool result
-into the final Slack answer, and example question → command mappings.
+See [`docs/HERMES.md`](docs/HERMES.md) for the full guide. Install the
+`docfoo_plugin` Hermes plugin once so a `--hermes-final` tool result becomes
+the final Slack answer with no second model pass:
+
+```bash
+python3 hermes/install.py      # Linux/WSL
+python hermes\install.py       # Windows
+```
+
+The plugin lives outside the Hermes repo (`~/.hermes/plugins/docfoo_plugin/`),
+so `hermes update` never wipes it. See [`hermes/README.md`](hermes/README.md).
 
 ## Roadmap
 
