@@ -1,29 +1,42 @@
 # Hermes integration (`docfoo_plugin`)
 
-Makes a DocFoo CLI tool result the **final** Slack answer instead of letting
-Hermes paraphrase it. When the CLI is called with `--hermes-final`, stdout
-starts with `[[hermes:final]]`; the plugin wraps `run_tool_round` so that
-result ends the turn — the same `terminate` behavior DocFoo's Buddy uses.
+The plugin is the entire Hermes integration — no skill install, no
+`soul.md`/persona edit, no core patch. It registers:
+
+- a **system prompt section** (`docfoo.cli`) that routes questions about the
+  user's documents to the `docfoo` CLI and requires stdout to be relayed
+  verbatim;
+- a **plugin-scoped skill** (`docfoo_plugin:docfoo`) with the full command
+  reference (resources, notes, backups, collections, indexing, scanning);
+- a **`run_tool_round` wrapper** so a tool result carrying the
+  `[[hermes:final]]` sentinel ends the turn with that text — Hermes never
+  makes the second (paraphrase) model call. It unwraps Hermes' terminal
+  envelope `{"output": "...", "exit_code": 0, "error": null}`.
 
 ## Install (once per machine)
 
 ```bash
-# Linux / WSL
-python3 hermes/install.py
+python3 hermes/install.py \
+  --workspace /path/to/DocFoo/db \
+  --model opencode-go/muse-spark-1.2-contributor \
+  --scope single_column_1 \
+  --bin /home/<user>/.local/bin/docfoo
+```
 
-# Windows
-python hermes\install.py
+Flags: `--workspace` (library / app `db/`), `--model` (kg query model),
+`--scope` (default kg scope; omit for the whole library), `--bin` (absolute
+path recommended for the gateway service), `--hermes-home DIR`.
+
+```bash
+python3 hermes/install.py --check       # exit 0 when installed + show config
+python3 hermes/install.py --uninstall   # disable + remove
+python3 hermes/install.py --no-enable   # copy only (enable manually)
 ```
 
 The installer writes `<HERMES_HOME>/plugins/docfoo_plugin/` (default
 `~/.hermes`) and runs `hermes plugins enable docfoo_plugin
---no-allow-tool-override`. Restart the Hermes gateway afterwards.
-
-```bash
-python3 hermes/install.py --check       # exit 0 when installed
-python3 hermes/install.py --uninstall   # disable + remove
-python3 hermes/install.py --no-enable   # copy only (enable manually)
-```
+--no-allow-tool-override`. **Restart the Hermes gateway afterwards** so a
+running process picks up the new plugin.
 
 ## Why a plugin instead of a source patch
 
@@ -38,8 +51,14 @@ ignored — the turn still completes, just with a paraphrase.
 
 ```bash
 hermes plugins list | grep docfoo_plugin
-# then from a Hermes session: run a docfoo kg query via the terminal tool
-# and confirm the final Slack message is the CLI output, not a rewrite.
+hermes -z "According to my documents, what is the Universal Patch Encoder?" --yolo
 ```
 
-See `docs/HERMES.md` for the full Slack guide and example commands.
+The output should be the CLI's markdown verbatim (inline
+`[resource/content.md:lines]` citations, `MEDIA:/abs/path` lines, a `Sources:`
+section). Confirm the loop skipped the second model call by comparing the last
+assistant message with the terminal tool's `output` in
+`~/.hermes/state.db` — they are byte-identical.
+
+See `docs/HERMES.md` for the full Slack guide, the WSL build steps, and
+example commands.

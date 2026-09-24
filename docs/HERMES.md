@@ -59,38 +59,91 @@ the answer. Example skill/instruction text:
 > translate, reorder, or add commentary. Keep `MEDIA:` lines exactly where
 > they are. If the command fails, report the error text.
 
-This costs one extra model turn (the model decides to relay), but the content
-is passed through unchanged. For the fastest path, install the plugin below.
+With the plugin below this routing is injected automatically and the turn ends
+right after the CLI call, so this text is only the fallback for environments
+where plugins cannot load. Without either, the model still relays the content
+but costs one extra turn.
 
-## 4. True terminate semantics (`docfoo_plugin`)
+## 4. The `docfoo_plugin` integration
 
-Hermes' loop always calls the model again after a tool round, so a tool result
-normally becomes context rather than the final message. The `docfoo_plugin`
-plugin wraps `run_tool_round` so a result starting with `[[hermes:final]]`
-ends the turn with that text — the same `terminate` behavior DocFoo's Buddy
-uses for `query_kg`.
+The plugin is the entire Hermes integration — no skill install, no
+`soul.md`/persona edit, no core patch. At load time it registers three things:
+
+1. **A system prompt section** (`docfoo.cli`) that tells the model, whenever a
+   question is about the user's documents, to run the CLI and relay stdout
+   verbatim. It embeds the exact command, built from `config.json`.
+2. **A plugin-scoped skill** (`docfoo_plugin:docfoo`, via `skill_view`) with
+   the full command reference — resources, notes, backups, collections,
+   indexing, scanning.
+3. **A `run_tool_round` wrapper** so a tool result carrying the
+   `[[hermes:final]]` sentinel ends the turn with that text: Hermes never
+   makes the second (paraphrase) model call. It unwraps Hermes' terminal
+   envelope `{"output": "...", "exit_code": 0, "error": null}` as well as
+   plain-string tool results.
 
 Install it once (cross-platform, pure Python):
 
 ```bash
-python3 hermes/install.py        # Linux / WSL
-python hermes\install.py         # Windows
+python3 hermes/install.py \
+  [--workspace DIR] [--model PROVIDER/MODEL] [--scope RESOURCE] [--bin PATH]
 python3 hermes/install.py --check
 python3 hermes/install.py --uninstall
 ```
 
+- `--workspace` — the DocFoo library (the desktop app's `db/` folder works).
+- `--model` — provider/model for kg queries, e.g.
+  `opencode-go/muse-spark-1.2-contributor`.
+- `--scope` — default `--scope` for kg queries (omit for the whole library).
+- `--bin` — `docfoo` executable name or absolute path. Use an absolute path
+  (`/home/<user>/.local/bin/docfoo`) so the gateway's service PATH cannot hide
+  the binary.
+
 The installer writes `<HERMES_HOME>/plugins/docfoo_plugin/` (default
 `~/.hermes`) and runs `hermes plugins enable docfoo_plugin
 --no-allow-tool-override`. Restart the Hermes gateway afterwards. No core
-files are modified.
+Hermes files are modified.
 
 **Why a plugin:** `hermes update` is git-based and autostashes/switches
 branches on a dirty tree, so a source patch would need re-application (and can
 conflict) on every update. User plugins live outside the repo and load at
 startup, so this survives updates automatically. If a future Hermes renames
 `run_tool_round`, the wrapper stops applying and the sentinel is simply
-ignored — the turn still completes, just with a paraphrase. See
-`hermes/README.md`.
+ignored — the turn still completes, just with a paraphrase.
+
+### Build and install the CLI in WSL/Linux
+
+Hermes in WSL needs native Linux binaries: a Windows `docfoo.exe` can still
+run through interop, but its `MEDIA:` paths and sidecar would be Windows-side.
+In the WSL shell:
+
+```bash
+cd /mnt/c/Users/<you>/Documents/Test/DocFoo_CLI
+
+# 1. CLI (release)
+CARGO_TARGET_DIR=$HOME/.cache/docfoo-target cargo build --release
+install -m 755 $HOME/.cache/docfoo-target/release/docfoo ~/.local/bin/docfoo
+
+# 2. Sidecar — build with a *Linux* bun. The `bun` on PATH inside WSL is
+#    often the Windows npm shim, which cross-builds an .exe.
+curl -fsSL -o /tmp/bun.zip \
+  https://github.com/oven-sh/bun/releases/download/bun-v1.3.11/bun-linux-x64.zip
+python3 -c "import zipfile; zipfile.ZipFile('/tmp/bun.zip').extractall('/tmp/bun')"
+install -m 755 /tmp/bun/bun-linux-x64/bun ~/.local/bin/bun
+mkdir -p ~/.cache/docfoo-sidecar
+(cd sidecar && tar --exclude=node_modules -cf - .) \
+  | (cd ~/.cache/docfoo-sidecar && tar -xf -)
+cd ~/.cache/docfoo-sidecar && rm -rf node_modules
+~/.local/bin/bun install
+~/.local/bin/bun build --compile ./main.ts --outfile docfoo-agent
+install -m 755 docfoo-agent ~/.local/bin/docfoo-agent
+
+# 3. Credentials (stored in Pi's auth.json; no env var needed at query time)
+~/.local/bin/docfoo --workspace /mnt/c/.../db auth --set opencode-go --key "$OPENCODE_GO_API_KEY"
+```
+
+The CLI finds `docfoo-agent` next to itself. `scripts/release.sh` builds the
+same pair plus a tarball when run on a Linux host (it forces the Linux sidecar
+target).
 
 ### Manual fallback (no plugin system)
 
