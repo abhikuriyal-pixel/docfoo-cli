@@ -13,6 +13,28 @@ use std::sync::OnceLock;
 use regex::Regex;
 use serde_json::{json, Value};
 
+const IMAGE_EXTS: [&str; 6] = ["png", "jpg", "jpeg", "gif", "webp", "bmp"];
+
+/// Resolve an image path, repairing a wrong image extension when the
+/// same-stem file exists (models sometimes write `.png` for a `.jpg`).
+fn resolve_asset(resources_dir: &Path, path: &str) -> Option<std::path::PathBuf> {
+    let direct = resources_dir.join(path);
+    if direct.is_file() {
+        return Some(direct);
+    }
+    let current = direct
+        .extension()
+        .and_then(|ext| ext.to_str())
+        .map(str::to_lowercase)?;
+    if !IMAGE_EXTS.contains(&current.as_str()) {
+        return None;
+    }
+    IMAGE_EXTS
+        .iter()
+        .map(|ext| direct.with_extension(ext))
+        .find(|candidate| candidate.is_file())
+}
+
 fn figure_re() -> &'static Regex {
     static RE: OnceLock<Regex> = OnceLock::new();
     // `![](path)` and `![](<path with spaces>)`; alt text is ignored.
@@ -34,10 +56,15 @@ pub fn extract_figures(answer: &str, resources_dir: &Path) -> Vec<Value> {
             if path.is_empty() {
                 return None;
             }
-            let absolute = resources_dir.join(path);
+            let absolute = resolve_asset(resources_dir, path);
+            let resolved = absolute
+                .as_ref()
+                .and_then(|abs| abs.strip_prefix(resources_dir).ok())
+                .map(|rel| rel.to_string_lossy().replace('\\', "/"))
+                .unwrap_or_else(|| path.to_string());
             Some(json!({
-                "path": path,
-                "abs_path": if absolute.is_file() { Value::String(absolute.display().to_string()) } else { Value::Null },
+                "path": resolved,
+                "abs_path": absolute.map(|abs| Value::String(abs.display().to_string())).unwrap_or(Value::Null),
                 "markdown": caps[0].to_string(),
             }))
         })
@@ -118,11 +145,10 @@ fn convert_figures(text: &str, resources_dir: &Path) -> String {
             {
                 return caps[0].to_string();
             }
-            let absolute = resources_dir.join(path);
-            if absolute.is_file() {
-                format!("MEDIA:{}", absolute.display())
-            } else {
-                caps[0].to_string()
+            let absolute = resolve_asset(resources_dir, path);
+            match absolute {
+                Some(absolute) => format!("MEDIA:{}", absolute.display()),
+                None => caps[0].to_string(),
             }
         })
         .to_string()
@@ -352,6 +378,16 @@ mod tests {
         let tables = extract_tables("before\n\n| A | B |\n|---|---|\n| 1 | 2 |\n\nafter");
         assert_eq!(tables.len(), 1);
         assert!(tables[0].starts_with("| A | B |"));
+    }
+
+    #[test]
+    fn wrong_image_extension_is_repaired() {
+        let temp = tempfile::tempdir().unwrap();
+        std::fs::create_dir_all(temp.path().join("Book/assets")).unwrap();
+        std::fs::write(temp.path().join("Book/assets/f.jpg"), b"jpg").unwrap();
+        let figures = extract_figures("![](Book/assets/f.png)", temp.path());
+        assert_eq!(figures[0]["path"], "Book/assets/f.jpg");
+        assert!(figures[0]["abs_path"].as_str().unwrap().ends_with("f.jpg"));
     }
 
     #[test]
