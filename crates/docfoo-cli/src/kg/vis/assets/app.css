@@ -19,21 +19,33 @@ code, pre { font-family: var(--font-mono); }
 /* ── Themes ────────────────────────────────────────────────────────────── */
 
 :root {
+  /* Kinetic Typography — token-for-token the desktop theme. */
   --background: #0D0D0F;
   --foreground: #E8E8E0;
   --card: #161618;
+  --card-foreground: #E8E8E0;
   --popover: #1E1E20;
+  --popover-foreground: #E8E8E0;
   --primary: #4F6A36;
-  --primary-foreground: #FFFFFF;
+  --primary-foreground: #E8E8E0;
   --secondary: #27272A;
+  --secondary-foreground: #FAFAFA;
   --muted: #18181B;
   --muted-foreground: #A1A1AA;
   --accent: #DFE104;
+  --accent-foreground: #000000;
   --destructive: #8B3A3A;
+  --destructive-foreground: #FAFAFA;
   --border: #3F3F46;
+  --input: #18181B;
   --ring: #DFE104;
-  --code-bg: #101012;
-  --radius: 4px;
+  --success: #4A8A50;
+  --danger: #E5484D;
+  --warning: #DFE104;
+  --warning-foreground: #000000;
+  --mask-metal: #7FB069;
+  --code-bg: #18181B;
+  --radius: 0px;
 
   --font-sans: 'Space Grotesk', system-ui, sans-serif;
   --font-display: 'Space Grotesk', system-ui, sans-serif;
@@ -41,26 +53,41 @@ code, pre { font-family: var(--font-mono); }
 
   --kg-viz-seed: #DFE104;
   --kg-viz-hop: #FF5A1F;
-  --kg-viz-evidence: #B18CFF;
+  /* Evidence UI chrome follows the theme primary (green); the canvas paints
+     seeds/hops only, so no ultraviolet remains anywhere in the page. */
+  --kg-viz-evidence: var(--primary);
   --kg-viz-retry: #E5484D;
   --kg-viz-node: #9C9CA6;
   --kg-viz-edge: rgba(232, 232, 224, 0.14);
 }
 
 body[data-theme="art-deco"] {
+  /* Art Deco — The Gatsby Aesthetic; token-for-token the desktop theme. */
   --background: #0A0A0A;
   --foreground: #F2F0E4;
   --card: #141414;
+  --card-foreground: #F2F0E4;
   --popover: #1A1A1A;
+  --popover-foreground: #F2F0E4;
   --primary: #6E6233;
   --primary-foreground: #FFFFFF;
   --secondary: #1E3D59;
+  --secondary-foreground: #F2F0E4;
   --muted: #1A1A1A;
   --muted-foreground: #888888;
   --accent: #8A7A40;
+  --accent-foreground: #0A0A0A;
   --destructive: #8B2020;
+  --destructive-foreground: #F2F0E4;
   --border: #8A7A40;
+  --input: #141414;
   --ring: #8A7A40;
+  --success: #8A7A40;
+  --success-foreground: #FFFFFF;
+  --danger: #D4554A;
+  --warning: #B8860B;
+  --warning-foreground: #F2F0E4;
+  --mask-metal: #C9A227;
   --code-bg: #1A1A1A;
   --radius: 0px;
 
@@ -70,7 +97,7 @@ body[data-theme="art-deco"] {
 
   --kg-viz-seed: #E7C05C;
   --kg-viz-hop: #CD7B47;
-  --kg-viz-evidence: #A98BC9;
+  --kg-viz-evidence: var(--primary);
   --kg-viz-retry: #D4554A;
   --kg-viz-node: #8D8B7E;
   --kg-viz-edge: rgba(138, 122, 64, 0.28);
@@ -98,6 +125,28 @@ body[data-theme="art-deco"]::before {
     repeating-linear-gradient(-45deg, transparent, transparent 40px, rgba(212, 175, 55, 0.03) 40px, rgba(212, 175, 55, 0.03) 41px);
 }
 
+/* Kinetic's fine noise texture, exactly as the desktop overlay. */
+body[data-theme="kinetic"]::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  pointer-events: none;
+  opacity: 0.03;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-repeat: repeat;
+  background-size: 200px 200px;
+}
+
+/* Theme scrollbars (desktop parity). */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: transparent; }
+body[data-theme="kinetic"] ::-webkit-scrollbar-thumb { background: #3F3F46; border-radius: 5px; }
+body[data-theme="kinetic"] ::-webkit-scrollbar-thumb:hover { background: #A1A1AA; }
+body[data-theme="art-deco"] ::-webkit-scrollbar-thumb { background: rgba(212, 175, 55, 0.3); }
+body[data-theme="art-deco"] ::-webkit-scrollbar-thumb:hover { background: rgba(212, 175, 55, 0.5); }
+
 /* ── Header ────────────────────────────────────────────────────────────── */
 
 .kg-header {
@@ -111,7 +160,12 @@ body[data-theme="art-deco"]::before {
   min-height: 46px;
   padding: 0.35rem 0.7rem;
   background: var(--card);
-  border-bottom: 1px solid var(--border);
+  border-bottom: 2px solid var(--border);
+}
+
+body[data-theme="art-deco"] .kg-header {
+  border-bottom-width: 1px;
+  box-shadow: 0 1px 0 var(--border);
 }
 
 .kg-title {
@@ -182,7 +236,8 @@ body[data-theme="art-deco"]::before {
   font-size: 0.58rem;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--kg-viz-evidence);
+  color: var(--muted-foreground);
+  opacity: 0.7;
 }
 .model-provider:empty { display: none; }
 .model-name {
@@ -227,7 +282,7 @@ body[data-theme="art-deco"]::before {
   flex-direction: column;
   padding: 0.65rem;
   background: var(--popover);
-  border: 1px solid color-mix(in oklab, var(--kg-viz-evidence) 30%, var(--border));
+  border: 1px solid color-mix(in oklab, var(--ring) 30%, var(--border));
   box-shadow: 0 14px 40px oklch(0 0 0 / 0.5);
 }
 .model-popover-head {
@@ -343,6 +398,7 @@ body[data-theme="art-deco"]::before {
 .kg-viz-seg { display: none; }
 
 .kg-chat-pane {
+  --chat-font-size: 14px;
   display: flex;
   flex-direction: column;
   min-width: 0;
@@ -769,7 +825,7 @@ body[data-theme="art-deco"]::before {
   max-width: 100%;
   padding: 0.5rem 0.625rem;
   border-radius: var(--radius);
-  font-size: 0.78rem;
+  font-size: var(--chat-font-size, 14px);
   line-height: 1.55;
   overflow-wrap: anywhere;
 }
@@ -881,14 +937,35 @@ body[data-theme="art-deco"]::before {
 .markdown-content h2 { font-size: 1.16em; }
 .markdown-content h3 { font-size: 1.06em; }
 .markdown-content h4, .markdown-content h5, .markdown-content h6 { font-size: 1em; }
+
+/* Theme heading treatments (desktop parity). */
+body[data-theme="kinetic"] .markdown-content h1 {
+  font-size: 1.125rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: -0.01em;
+  line-height: 1.1;
+}
+body[data-theme="kinetic"] .markdown-content h2 {
+  font-size: 1rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: -0.01em;
+}
+body[data-theme="kinetic"] .markdown-content h3 {
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
 body[data-theme="art-deco"] .markdown-content h1,
 body[data-theme="art-deco"] .markdown-content h2,
 body[data-theme="art-deco"] .markdown-content h3,
 body[data-theme="art-deco"] .markdown-content h4 {
-  font-family: var(--font-display);
+  font-family: 'Marcellus', serif;
+  font-size: 0.8125rem;
   letter-spacing: 0.05em;
   text-transform: uppercase;
-  color: var(--accent);
+  color: #8A7A40;
 }
 .markdown-content strong { font-weight: 700; }
 .markdown-content ul, .markdown-content ol { margin: 0.25em 0; padding-left: 1.35rem; }
@@ -904,30 +981,63 @@ body[data-theme="art-deco"] .markdown-content h4 {
 .markdown-content a { color: var(--accent); text-decoration: underline; text-underline-offset: 2px; }
 .markdown-content pre {
   max-width: 100%;
-  margin: 0.55em 0;
+  margin: 0.5em 0;
   overflow-x: auto;
   background: var(--code-bg);
-  border: 1px solid color-mix(in oklab, var(--border) 70%, transparent);
+  border-radius: calc(var(--radius) - 0.125rem);
 }
-.markdown-content pre code { display: block; padding: 0.55rem; font-size: 0.72rem; line-height: 1.5; white-space: pre; }
-.markdown-content code { font-family: var(--font-mono); }
-.markdown-content .kg-inline-code {
-  padding: 0.08rem 0.27rem;
-  color: var(--accent);
+.markdown-content pre code {
+  display: block;
+  padding: 0.5rem;
+  background: var(--code-bg) !important;
+  font-size: var(--chat-font-size, 0.6875rem);
+  line-height: 1.5;
+  white-space: pre;
+}
+.markdown-content code:not(pre code) {
+  padding: 0.125rem 0.25rem;
   background: var(--code-bg);
-  border: 1px solid color-mix(in oklab, var(--border) 65%, transparent);
-  font-size: 0.84em;
+  border-radius: 0.1875rem;
+  font-family: var(--font-mono);
+  font-size: 0.75em;
 }
-.markdown-content .kg-cite {
-  display: inline-block;
-  margin: 0 0.1em;
-  padding: 0.04rem 0.3rem;
-  color: var(--kg-viz-evidence);
-  background: color-mix(in oklab, var(--kg-viz-evidence) 12%, transparent);
-  border: 1px solid color-mix(in oklab, var(--kg-viz-evidence) 43%, transparent);
-  border-radius: 3px;
-  font-size: 0.76em;
+/* Citation chips use --primary like the desktop (green in Kinetic, gold in
+   Art Deco) — never the violet evidence accent. */
+.citation-chip {
+  display: inline-flex;
+  align-items: center;
+  margin: 0 0.125em;
+  padding: 0.0625rem 0.3125rem;
+  color: var(--primary);
+  background: oklch(from var(--primary) l c h / 0.12);
+  border: 1px solid oklch(from var(--primary) l c h / 0.35);
+  border-radius: 0.3125rem;
+  font-family: var(--font-mono);
+  font-size: var(--chat-font-size, 0.6875rem);
+  line-height: 1.4;
+  cursor: pointer;
+  vertical-align: baseline;
   white-space: nowrap;
+  transition: background 0.12s, border-color 0.12s;
+}
+.citation-chip:hover {
+  background: oklch(from var(--primary) l c h / 0.22);
+  border-color: var(--primary);
+}
+/* KaTeX (desktop parity). */
+.markdown-content .katex { font-size: 1.05em; }
+.markdown-content .katex-display {
+  max-width: 100%;
+  margin: 0.5em 0;
+  padding: 0.25em 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  text-align: center;
+}
+.markdown-content .katex-error {
+  color: inherit;
+  font-family: var(--font-mono);
+  font-size: 0.85em;
 }
 .markdown-content table {
   display: block;

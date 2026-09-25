@@ -126,7 +126,9 @@ fn route(request: &mut Request, state: &Arc<ServerState>) -> ResponseBox {
     match (&method, path) {
         (Method::Get, "/") | (Method::Get, "/index.html") => assets::serve("index.html"),
         (Method::Get, "/app.css") => assets::serve("app.css"),
-        (Method::Get, other) if other.starts_with("/js/") => assets::serve(other.trim_start_matches('/')),
+        (Method::Get, other) if other.starts_with("/js/") || other.starts_with("/katex/") => {
+            assets::serve(other.trim_start_matches('/'))
+        }
 
         (Method::Get, "/api/state") => api_state(state),
         (Method::Get, "/api/graph") => api_graph(query_string, state),

@@ -3,6 +3,22 @@ import assert from 'node:assert/strict';
 
 import { renderMarkdown, rewriteFigureSrc } from '../../src/kg/vis/assets/js/markdown.js';
 
+/** Minimal KaTeX stand-in so math extraction can be asserted without a DOM. */
+function withFakeKatex(run) {
+  const calls = [];
+  globalThis.katex = {
+    renderToString(tex, options) {
+      calls.push({ tex, display: options.displayMode });
+      return `<span class="katex" data-tex="${tex}" data-display="${options.displayMode}">K</span>`;
+    },
+  };
+  try {
+    run(calls);
+  } finally {
+    delete globalThis.katex;
+  }
+}
+
 test('raw HTML is escaped before formatting', () => {
   const html = renderMarkdown('Hello <script>alert("x")</script> **bold**');
   assert.ok(!html.includes('<script>'), html);
@@ -10,14 +26,14 @@ test('raw HTML is escaped before formatting', () => {
   assert.ok(html.includes('<strong>bold</strong>'));
 });
 
-test('citations become code chips rather than markdown links', () => {
+test('citations become primary-coloured chips rather than markdown links', () => {
   const html = renderMarkdown('See [doc/content.md:12-34] and [notes.txt].');
-  assert.ok(html.includes('<code class="kg-cite">doc/content.md:12-34</code>'), html);
-  assert.ok(html.includes('<code class="kg-cite">notes.txt</code>'));
+  assert.ok(html.includes('<code class="citation-chip">doc/content.md:12-34</code>'), html);
+  assert.ok(html.includes('<code class="citation-chip">notes.txt</code>'));
 
   const link = renderMarkdown('[doc/content.md:12-34](https://example.com)');
   assert.ok(link.includes('<a href="https://example.com"'), link);
-  assert.ok(!link.includes('kg-cite'), link);
+  assert.ok(!link.includes('citation-chip'), link);
 });
 
 test('figures rewrite to the loopback asset endpoint and paths are decoded', () => {
@@ -55,8 +71,37 @@ test('tables, lists, code fences and headings render as blocks', () => {
   assert.ok(html.includes('<pre><code class="language-rust">let x = 1;</code></pre>'));
 });
 
-test('inline code protects markdown-looking content', () => {
-  const html = renderMarkdown('Use `[not/a/link.md]` literally');
-  assert.ok(html.includes('<code class="kg-inline-code">[not/a/link.md]</code>'), html);
-  assert.ok(!html.includes('kg-cite'), html);
+test('inline code protects markdown and math-looking content', () => {
+  const html = renderMarkdown('Use `[not/a/link.md]` and `$not math$` literally');
+  assert.ok(html.includes('<code>[not/a/link.md]</code>'), html);
+  assert.ok(html.includes('<code>$not math$</code>'), html);
+  assert.ok(!html.includes('citation-chip'), html);
+});
+
+test('inline and display math are extracted and rendered by KaTeX', () => {
+  withFakeKatex((calls) => {
+    const html = renderMarkdown('Inline $x^2$ here.\n\n$$\\frac{a}{b}$$\n\nMore.');
+    assert.equal(calls.length, 2);
+    assert.deepEqual(calls[0], { tex: 'x^2', display: false });
+    assert.deepEqual(calls[1], { tex: '\\frac{a}{b}', display: true });
+    assert.ok(html.includes('data-display="false"'), html);
+    assert.ok(html.includes('data-display="true"'), html);
+    assert.ok(!html.includes('$x^2$'), 'math source must not leak as text');
+  });
+});
+
+test('math environments render and fenced code is never math', () => {
+  withFakeKatex((calls) => {
+    const html = renderMarkdown('Before\n\n\\begin{align}\na &= b \\\\\n\\end{align}\n\n```\n$not math$ x^2\n```');
+    assert.equal(calls.length, 1);
+    assert.ok(calls[0].display);
+    assert.ok(html.includes('data-tex="\\begin{align}'), html);
+    assert.ok(html.includes('$not math$ x^2'), 'fenced code stays literal');
+  });
+});
+
+test('math degrades to escaped literal text when KaTeX is unavailable', () => {
+  const html = renderMarkdown('Inline $x^2$ and \\(y\\).');
+  assert.ok(html.includes('$x^2$'), html);
+  assert.ok(!html.includes('<span class="katex"'), html);
 });

@@ -1186,9 +1186,11 @@ async function changeScope() {
 }
 
 function updateThemeUi() {
+  currentTheme = applyTheme(currentTheme, dom.body);
   renderer?.invalidate();
-  const next = shellTheme() === 'kinetic' ? 'Art Deco' : 'Kinetic';
-  setText(dom.themeLabel, next);
+  const current = currentTheme === 'kinetic' ? 'Kinetic' : 'Art Deco';
+  const next = currentTheme === 'kinetic' ? 'Art Deco' : 'Kinetic';
+  setText(dom.themeLabel, current);
   dom.themeButton.title = `Switch to ${next}`;
   dom.themeButton.setAttribute('aria-label', dom.themeButton.title);
 }

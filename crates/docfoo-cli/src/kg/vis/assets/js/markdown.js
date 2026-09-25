@@ -2,9 +2,16 @@
  * Compact, XSS-safe markdown renderer for KG answers.
  *
  * Supports headings, paragraphs, bold/italic, inline code, fenced code,
- * lists, blockquotes, horizontal rules, links, GFM tables, figures and
- * citation chips. Raw HTML is always escaped before it reaches the page;
- * generated elements are slotted before escaping so their markup survives.
+ * lists, blockquotes, horizontal rules, links, GFM tables, figures, citation
+ * chips and KaTeX math. Raw HTML is always escaped before it reaches the
+ * page; generated elements are slotted before escaping so their markup
+ * survives.
+ *
+ * Math handling mirrors the desktop app (`src/lib/markdown.ts`): `$…$` /
+ * `$$…$$` (plus `\(…\)`, `\[…\]` and standalone math environments) are
+ * extracted BEFORE block parsing as inert private-use placeholders, rendered
+ * with KaTeX once the HTML is assembled. Inline code is protected in the same
+ * pass, so `$` inside backticks never becomes math.
  */
 
 export function escapeHtml(value) {
@@ -24,9 +31,115 @@ export function rewriteFigureSrc(path) {
   return `/api/asset?path=${encodeURIComponent(clean)}`;
 }
 
+// ── KaTeX math (port of the desktop's protect/restore pipeline) ────────────
+
+/** Delimiters KaTeX auto-render understands (kept for parity/tests). */
+export const KATEX_DELIMITERS = [
+  { left: '$$', right: '$$', display: true },
+  { left: '$', right: '$', display: false },
+  { left: '\\(', right: '\\)', display: false },
+];
+
+/** Math environments KaTeX renders as a unit, e.g. \begin{align}…\end{align}. */
+const MATH_ENVIRONMENTS = [
+  'equation', 'equation*', 'align', 'align*', 'alignat', 'alignat*',
+  'gather', 'gather*', 'multline', 'multline*', 'displaymath', 'math',
+  'array', 'cases', 'matrix', 'pmatrix', 'bmatrix', 'Bmatrix',
+  'vmatrix', 'Vmatrix', 'split', 'aligned', 'gathered', 'smallmatrix',
+];
+
+const MATH_ENV_RE = new RegExp(
+  String.raw`\\begin\{(${MATH_ENVIRONMENTS.map((env) => env.replace(/\*/g, '\\*')).join('|')})\}([\s\S]*?)\\end\{\1\}`,
+  'g',
+);
+
+/** A bracket/paren span holding only numbers/punctuation is a citation
+ *  (`\[12, 36, 37\]`), not math: leave it for the text pass. */
+const CITATION_ONLY = /^[\s\d,;.+\-–—()[\]A-Z._:&/-]*$/;
+
+/** `$$\n\[ x \]\tag{1}\n$$` (a common PDF-to-markdown shape) → `x \tag{1}`. */
+function unwrapDisplayBrackets(tex) {
+  return tex.replace(/^\s*\\\[/, '').replace(/\\\]/g, '');
+}
+
+/**
+ * Render one expression to HTML. `globalThis.katex` is set by the vendored
+ * `katex.min.js` script in the page; without it (Node tests, missing asset)
+ * the span degrades to escaped literal text.
+ */
+export function renderMathToString(tex, display) {
+  const fallback = display ? `$$${tex}$$` : `$${tex}$`;
+  const katex = globalThis.katex;
+  if (!katex || typeof katex.renderToString !== 'function') return escapeHtml(fallback);
+  try {
+    return katex.renderToString(tex, {
+      throwOnError: false,
+      displayMode: display,
+      errorColor: 'currentColor',
+    });
+  } catch {
+    return escapeHtml(fallback);
+  }
+}
+
+const MATH_MARKER = /\uE000KM(\d+)\uE000/g;
+const CODE_MARKER = /\uE000KC(\d+)\uE000/g;
+
+/**
+ * Replace fenced blocks (untouched), inline code and math spans with inert
+ * private-use placeholders. Fenced chunks are kept in place so the block
+ * parser still sees them; math/code are restored after rendering.
+ */
+function protectMathAndCode(source) {
+  const math = [];
+  const code = [];
+  const chunks = source.split(/(```[\s\S]*?```|~~~[\s\S]*?~~~)/g);
+
+  const out = chunks.map((chunk, index) => {
+    if (index % 2 === 1) return chunk; // fenced code block
+
+    // Inline code first, so `$` inside backticks never becomes math.
+    let text = chunk.replace(/(`+)([\s\S]*?)\1/g, (_, _ticks, body) => {
+      const id = code.push(body) - 1;
+      return `\uE000KC${id}\uE000`;
+    });
+
+    const addMath = (tex, display) => {
+      const id = math.push({ tex, display }) - 1;
+      return `\uE000KM${id}\uE000`;
+    };
+
+    // Display math takes precedence over inline; environments are extracted
+    // last so environments inside a delimiter stay part of their math.
+    text = text
+      .replace(/(?<!\\)\$\$([\s\S]*?)\$\$/g, (_, tex) => addMath(unwrapDisplayBrackets(tex), true))
+      .replace(/(?<!\\)\\\[([\s\S]*?)\\\]/g, (whole, tex) =>
+        (CITATION_ONLY.test(tex) ? whole : addMath(tex, true)))
+      .replace(/(?<!\\)\\\(([\s\S]*?)\\\)/g, (whole, tex) =>
+        (CITATION_ONLY.test(tex) ? whole : addMath(tex, false)))
+      .replace(/(?<!\\)\$(?!\s)((?:\\.|[^$\\\n])+?)(?<!\s)\$/g, (_, tex) => addMath(tex, false))
+      .replace(MATH_ENV_RE, (_, env, body) =>
+        addMath(`\\begin{${env}}${body}\\end{${env}}`, env !== 'math'));
+
+    return text;
+  });
+
+  return { text: out.join(''), math, code };
+}
+
+function restoreMathAndCode(html, math, code) {
+  return html
+    .replace(MATH_MARKER, (_, index) => {
+      const span = math[Number(index)];
+      return span ? renderMathToString(span.tex, span.display) : '';
+    })
+    .replace(CODE_MARKER, (_, index) => `<code>${escapeHtml(code[Number(index)] ?? '')}</code>`);
+}
+
+// ── Inline markdown ────────────────────────────────────────────────────────
+
 const IMAGE_PATTERN = /!\[([^\]]*)\]\(\s*(?:<([^>]+)>|([^)]+?))\s*\)/g;
 const LINK_PATTERN = /\[([^\]]+)\]\(\s*(?:<([^>]+)>|([^\s)]+))(?:\s+(?:"[^"]*"|'[^']*'|\([^)]*\)))?\s*\)/g;
-const CODE_PATTERN = /`([^`\n]+)`/g;
 /** `[doc/content.md:12-34]` (and plain document names in brackets). */
 export const CITATION_PATTERN = /\[([A-Za-z0-9_][A-Za-z0-9_\-./\\ ,]*\.(?:md|markdown|pdf|txt|json|csv|html?)(?::[0-9\-, ]+)?)\]/g;
 
@@ -38,8 +151,8 @@ function safeHref(value) {
 /**
  * One inline pass. Each generated element is parked in a slot and replaced by
  * a control-character marker; the remaining prose is escaped, then the slots
- * are restored. Footnote: inline code runs first so markdown-looking text
- * inside backticks is never reformatted.
+ * are restored. Math/code placeholders from the protect pass pass through
+ * untouched.
  */
 export function renderInline(raw) {
   const slots = [];
@@ -51,13 +164,10 @@ export function renderInline(raw) {
 
   let text = String(raw ?? '');
 
-  text = text.replace(CODE_PATTERN, (_, code) =>
-    slot(`<code class="kg-inline-code">${escapeHtml(code)}</code>`));
-
-  text = text.replace(IMAGE_PATTERN, (_, alt, anglePath, plainPath) => {
+  text = text.replace(IMAGE_PATTERN, (whole, alt, anglePath, plainPath) => {
     const path = (anglePath ?? plainPath ?? '').trim();
     const src = rewriteFigureSrc(path);
-    if (!src) return _;
+    if (!src) return whole;
     return slot(
       `<img class="kg-figure" src="${escapeHtml(src)}" alt="${escapeHtml(alt)}" loading="lazy">`,
     );
@@ -74,7 +184,7 @@ export function renderInline(raw) {
   text = text.replace(CITATION_PATTERN, (whole, citation) => {
     const label = citation.trim();
     if (!label) return whole;
-    return slot(`<code class="kg-cite">${escapeHtml(label)}</code>`);
+    return slot(`<code class="citation-chip">${escapeHtml(label)}</code>`);
   });
 
   const escaped = escapeHtml(text)
@@ -86,7 +196,7 @@ export function renderInline(raw) {
   return escaped.replace(/\u0001(\d+)\u0002/g, (_, index) => slots[Number(index)] ?? '');
 }
 
-// ── Block parsing ─────────────────────────────────────────────────────────
+// ── Block parsing ──────────────────────────────────────────────────────────
 
 function splitTableRow(line) {
   let value = String(line ?? '').trim();
@@ -244,5 +354,7 @@ function renderBlocks(lines) {
 
 export function renderMarkdown(markdown) {
   const text = String(markdown ?? '').replace(/\r\n?/g, '\n');
-  return renderBlocks(text.split('\n'));
+  const { text: protectedText, math, code } = protectMathAndCode(text);
+  const html = renderBlocks(protectedText.split('\n'));
+  return restoreMathAndCode(html, math, code);
 }
