@@ -171,10 +171,12 @@ systemctl --user enable --now docfoo-sidecar
 Override the socket with `DOCFOO_SIDECAR_SOCKET`; default is
 `<workspace>/.agent/sidecar.sock` (`WS/.agent/sidecar.sock`).
 
-### Custom providers (example: Inception)
+### Custom providers (models.json)
 
-Pi reads `<workspace>/.agent/models.json`; any OpenAI-compatible endpoint can
-be added there. The API key can interpolate an environment variable:
+**Inception is bundled in the sidecar** (see below), so it needs no
+`models.json` entry — only an API key. For any *other* OpenAI-compatible
+endpoint, Pi reads `<workspace>/.agent/models.json`; the API key can
+interpolate an environment variable:
 
 ```json
 "inception": {
@@ -201,16 +203,29 @@ visible in WSL; copy the value once, e.g.
 Then `docfoo model --set kg inception/mercury-2.5` and use `--reasoning off`
 (fastest) or `medium` (sends `reasoning_effort`).
 
-### Bundled provider extensions
+### Bundled providers (Inception and InferX)
 
-The sidecar binary also compiles in Pi provider extensions. `pi-inferx-provider`
-adds **InferX** (`https://model.inferx.net`, OpenAI/vLLM-compatible) with live
-`/v1/models` discovery, a public-catalog fallback, and vLLM role/thinking
-shims; it reads `INFERX_API_KEY` (put it in the same `docfoo-sidecar.env` and
-restart the service). Refresh catalogs on demand with:
+The sidecar registers two providers that Pi's built-in catalog does not ship.
+Both are local modules compiled into `docfoo-agent` (`sidecar/inception.ts`,
+`sidecar/inferx.ts`), so they work in every workspace and survive
+`docfoo update` — no `models.json` entry needed:
+
+- **Inception** (`https://api.inceptionlabs.ai/v1`, OpenAI-compatible):
+  Mercury models discovered from `/v1/models` (context, output limit and
+  pricing included), reasoning with `reasoning_effort` support (`--reasoning
+  off` for the fastest answers). Reads `INCEPTION_API_KEY`.
+- **InferX** (`https://model.inferx.net/endpoints/v1`, OpenAI/vLLM-compatible):
+  endpoints discovered from `/v1/models` with vLLM role and thinking shims
+  (DeepSeek/GLM). Reads `INFERX_API_KEY`.
+
+Both catalogs are live: with the key configured, they are refreshed from
+`/v1/models` whenever models are listed and the cached list
+(`<workspace>/.agent/models-store.json`) is older than 24 hours; `--refresh`
+forces a fetch immediately. The cached catalog is restored on later starts
+even without a key. Pick a model with:
 
 ```bash
-docfoo model --list --refresh            # network refresh, then list
+docfoo model --list --refresh            # refresh catalogs, then list
 docfoo model --list --provider inferx    # just its models
 docfoo model --set kg inferx/<model>
 ```

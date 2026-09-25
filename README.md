@@ -265,8 +265,10 @@ Model slots live in `<workspace>/model-selection.json` and are shared with the
 desktop app. Credentials go through Pi (`<workspace>/.agent/auth.json`, or
 `docfoo auth --set PROVIDER --key KEY`); custom OpenAI-compatible providers
 can be declared in `<workspace>/.agent/models.json` with an environment key
-(`"apiKey": "$MY_API_KEY"`). The sidecar also bundles provider extensions
-(InferX ships this way). On Linux/WSL the systemd sidecar reads key overrides
+(`"apiKey": "$MY_API_KEY"`). The sidecar also bundles Inception and InferX as
+local provider modules compiled into `docfoo-agent` (no `models.json` entry
+needed; their catalogs refresh from `/v1/models`). On Linux/WSL the systemd
+sidecar reads key overrides
 from `~/.config/systemd/user/docfoo-sidecar.env`. See `docs/HERMES.md`
 ("Custom providers") for a worked example.
 

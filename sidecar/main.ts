@@ -16,8 +16,9 @@ import { join } from "node:path";
 import { createInterface } from "node:readline";
 import { ModelRuntime } from "@earendil-works/pi-coding-agent";
 import { CompleteService } from "./complete.js";
+import { INCEPTION_PROVIDER_ID, registerInceptionProvider } from "./inception.js";
+import { INFERX_PROVIDER_ID, registerInferxProvider } from "./inferx.js";
 import { ProviderService } from "./providers.js";
-import inferxProvider from "pi-inferx-provider/src/index.ts";
 
 const AGENT_DIR = process.env.DOCFOO_AGENT_DIR || join(process.cwd(), ".agent");
 
@@ -88,17 +89,46 @@ async function main(): Promise<void> {
     refreshOnCreate: true,
   });
 
-  // Bundled provider extensions. The extension API surface used here is
-  // narrow: pi-inferx-provider only calls registerProvider(), which
-  // ModelRuntime exposes publicly.
-  try {
-    const piShim = {
-      registerProvider: (providerId: string, config: unknown) =>
-        runtime.registerProvider(providerId, config as never),
-    };
-    await (inferxProvider as unknown as (pi: typeof piShim) => Promise<void>)(piShim);
-  } catch (error) {
-    process.stderr.write(`docfoo-agent: inferx provider failed: ${errorText(error)}\n`);
+  // Bundled provider modules: OpenAI-compatible providers pi's built-in
+  // catalog does not ship (Inception, InferX). Their model catalogs are
+  // discovered from each provider's /v1/models and cached per workspace.
+  const bundledProviders = [
+    [INCEPTION_PROVIDER_ID, registerInceptionProvider],
+    [INFERX_PROVIDER_ID, registerInferxProvider],
+  ] as const;
+  const registeredProviderIds: string[] = [];
+  for (const [providerId, register] of bundledProviders) {
+    try {
+      register(runtime);
+      registeredProviderIds.push(providerId);
+    } catch (error) {
+      process.stderr.write(`docfoo-agent: ${providerId} provider failed: ${errorText(error)}\n`);
+    }
+  }
+
+  // Discover the bundled provider catalogs lazily, when models are listed.
+  // Refreshing at registration would race the runtime's own registration
+  // refresh and abort the in-flight fetch. No network when the persisted
+  // catalog is recent; `--refresh` bypasses the freshness check.
+  async function discoverBundledCatalogs(): Promise<void> {
+    if (registeredProviderIds.length === 0) return;
+    try {
+      const result = await runtime.refresh({
+        allowNetwork: true,
+        providers: registeredProviderIds,
+      });
+      const providers = runtime.getProviders();
+      for (const [providerId, error] of result.errors) {
+        const provider = providers.find((candidate) => candidate.id === providerId);
+        // A missing key only matters when there is no persisted catalog to
+        // fall back on; otherwise stay quiet on every list request.
+        if (provider && provider.getModels().length === 0) {
+          process.stderr.write(`docfoo-agent: ${providerId}: ${error.message}\n`);
+        }
+      }
+    } catch (error) {
+      process.stderr.write(`docfoo-agent: provider catalog refresh failed: ${errorText(error)}\n`);
+    }
   }
 
   const complete = new CompleteService(runtime, emit);
@@ -115,6 +145,7 @@ async function main(): Promise<void> {
           complete.cancel(request);
           break;
         case "models":
+          if (request.refresh !== true) await discoverBundledCatalogs();
           await providers.list(requestId, request.refresh === true);
           break;
         case "auth_status":
