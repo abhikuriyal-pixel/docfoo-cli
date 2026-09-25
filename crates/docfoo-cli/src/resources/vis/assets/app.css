@@ -1,0 +1,909 @@
+/* ══════════════════════════════════════════════════════════════════════════
+   DocFoo resource browser — card library, document reader, outline, notes.
+   Tokens, fonts, reset and motif layers come from /base.css (shared with
+   `kg --vis`), so both pages stay token-for-token identical.
+   ══════════════════════════════════════════════════════════════════════ */
+
+@import url('/base.css');
+
+/* ── Header ────────────────────────────────────────────────────────────── */
+
+.res-header {
+  position: relative;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  flex: 0 0 auto;
+  min-height: 46px;
+  padding: 0.35rem 0.8rem;
+  background: var(--card);
+  border-bottom: 2px solid var(--border);
+}
+
+body[data-theme="art-deco"] .res-header {
+  border-bottom-width: 1px;
+  box-shadow: 0 1px 0 var(--border);
+}
+
+.res-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.78rem;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+.res-title svg { color: var(--accent); }
+.res-title-sep { color: var(--muted-foreground); }
+.res-title-sub {
+  color: var(--muted-foreground);
+  font-family: var(--font-mono);
+  font-size: 0.64rem;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.res-header-controls { display: flex; align-items: center; gap: 0.5rem; }
+.res-status {
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  letter-spacing: 0.05em;
+  color: var(--muted-foreground);
+}
+
+.control-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  height: 1.7rem;
+  padding: 0 0.55rem;
+  border: 1px solid var(--border);
+  background: var(--background);
+  color: var(--muted-foreground);
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+.control-btn:hover { color: var(--foreground); border-color: var(--accent); }
+.control-btn.bump { animation: control-bump 0.25s ease-out; }
+@keyframes control-bump {
+  0% { transform: scale(1); }
+  45% { transform: scale(1.12); }
+  100% { transform: scale(1); }
+}
+
+#dice { padding: 0 0.45rem; }
+#dice svg { display: block; }
+#dice.spinning svg { animation: dice-spin 0.4s ease-out; }
+@keyframes dice-spin { from { transform: rotate(0); } to { transform: rotate(360deg); } }
+
+/* ── Panes ─────────────────────────────────────────────────────────────── */
+
+.res-main {
+  position: relative;
+  z-index: 1;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.res-pane { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+
+/* ── Breadcrumbs ───────────────────────────────────────────────────────── */
+
+.breadcrumbs {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.5rem 1.25rem;
+  border-bottom: 1px solid var(--border);
+  background: color-mix(in oklab, var(--card) 55%, transparent);
+  flex-shrink: 0;
+  overflow-x: auto;
+  white-space: nowrap;
+}
+
+.breadcrumb-back {
+  border: 0;
+  background: transparent;
+  color: var(--muted-foreground);
+  font: inherit;
+  font-size: 0.85rem;
+  padding: 0 0.3rem;
+  cursor: pointer;
+}
+.breadcrumb-back:hover { color: var(--foreground); }
+
+.breadcrumb-item {
+  border: 0;
+  background: transparent;
+  color: var(--muted-foreground);
+  font: inherit;
+  font-size: 0.78rem;
+  padding: 0.15rem 0.35rem;
+  cursor: pointer;
+  border-radius: 2px;
+}
+.breadcrumb-item:hover:not(:disabled) { color: var(--foreground); background: var(--muted); }
+.breadcrumb-item.current { color: var(--foreground); font-weight: 600; cursor: default; }
+.breadcrumb-sep { color: var(--muted-foreground); font-size: 0.7rem; }
+
+/* ── Library level ─────────────────────────────────────────────────────── */
+
+.resources-scroll { flex: 1; min-height: 0; overflow-y: auto; padding: 1rem 1.25rem 2.5rem; }
+
+.level-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+.level-heading h2 { margin: 0; font-size: 1.05rem; font-weight: 600; }
+body[data-theme="art-deco"] .level-heading h2 {
+  font-family: var(--font-display);
+  font-size: 0.95rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+.level-desc {
+  margin: 0.2rem 0 0;
+  color: var(--muted-foreground);
+  font-family: var(--font-mono);
+  font-size: 0.66rem;
+}
+.level-actions { display: flex; gap: 0.4rem; }
+
+.res-error { color: var(--danger); font-family: var(--font-mono); font-size: 0.72rem; }
+.empty-state { color: var(--muted-foreground); font-size: 0.8rem; }
+
+/* ── Cards ─────────────────────────────────────────────────────────────── */
+
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 1rem;
+}
+
+.res-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  aspect-ratio: 1 / 1;
+  padding: 1rem;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: transform 0.12s, border-color 0.12s, box-shadow 0.12s;
+}
+.res-card:hover,
+.res-card:focus-visible {
+  transform: translateY(-2px);
+  border-color: var(--primary);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
+  outline: none;
+}
+
+.res-card-cover {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  margin-bottom: 0.4rem;
+  border-radius: 0.5rem;
+  overflow: hidden;
+  background: var(--muted);
+  color: var(--muted-foreground);
+}
+.res-card-cover--figure img,
+.res-card-cover--collage img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+.res-card-cover--figure img.loaded,
+.res-card-cover--collage img.loaded { opacity: 1; }
+
+/* A folder of cards: up to four of its children's covers tiled. */
+.res-card-cover--collage {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  grid-auto-rows: minmax(0, 1fr);
+  gap: 0.25rem;
+  padding: 0.25rem;
+  background: color-mix(in oklab, var(--foreground) 4%, var(--card));
+}
+.res-card-cover--collage img { object-fit: cover; border-radius: 0.375rem; }
+.res-card-cover--collage.n3 img:last-child { grid-column: 1 / -1; }
+
+.res-card-cover--mark,
+.res-card-cover--glyph { display: grid; place-items: center; }
+.res-card-monogram {
+  font-family: var(--font-display);
+  font-size: 2rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  padding-left: 0.16em;
+  color: color-mix(in oklab, var(--primary) 60%, var(--muted-foreground));
+  user-select: none;
+}
+
+.res-card-body { display: flex; flex-direction: column; gap: 0.2rem; min-width: 0; }
+.res-card-name {
+  margin: 0;
+  font-size: 0.82rem;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.res-card-meta {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  color: var(--muted-foreground);
+}
+.res-card-kind {
+  position: absolute;
+  top: 0.7rem;
+  right: 0.7rem;
+  padding: 0 0.3rem;
+  background: color-mix(in oklab, var(--background) 75%, transparent);
+  border: 1px solid var(--border);
+  font-family: var(--font-mono);
+  font-size: 0.5rem;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+}
+
+/* ── Document tabs ─────────────────────────────────────────────────────── */
+
+.res-tabs {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.25rem;
+  padding: 0.4rem 1.25rem 0;
+  border-bottom: 1px solid var(--border);
+  background: color-mix(in oklab, var(--card) 55%, transparent);
+  flex-shrink: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+.res-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  flex: 0 0 auto;
+  max-width: 18rem;
+  padding: 0.3rem 0.35rem 0.3rem 0.7rem;
+  border: 1px solid transparent;
+  border-bottom: 0;
+  border-radius: 4px 4px 0 0;
+  color: var(--muted-foreground);
+  font-size: 0.75rem;
+}
+.res-tab:hover { color: var(--foreground); background: color-mix(in oklab, var(--muted) 60%, transparent); }
+.res-tab.active { color: var(--foreground); background: var(--card); border-color: var(--border); }
+.res-tab-label {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  padding: 0;
+  max-width: 14rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.res-tab-close {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font-size: 0.85rem;
+  line-height: 1;
+  padding: 0 0.15rem;
+  cursor: pointer;
+  opacity: 0.7;
+}
+.res-tab-close:hover { color: var(--danger); opacity: 1; }
+
+/* ── Reader ────────────────────────────────────────────────────────────── */
+
+.chapter-viewer {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  font-size: var(--reader-font-size, 20px);
+}
+
+.chapter-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  padding: 0.6rem 1.25rem 0.5rem;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 1rem;
+  flex-shrink: 0;
+}
+.chapter-header-info { display: flex; align-items: center; gap: 0.6rem; min-width: 0; }
+.chapter-header-info h1 {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+body[data-theme="art-deco"] .chapter-header-info h1 {
+  font-family: var(--font-display);
+  letter-spacing: 0.03em;
+}
+.chapter-actions { display: flex; align-items: center; gap: 0.45rem; flex-wrap: wrap; }
+
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.7rem;
+  height: 1.7rem;
+  border: 1px solid var(--border);
+  background: var(--background);
+  color: var(--muted-foreground);
+  cursor: pointer;
+}
+.icon-btn:hover { color: var(--foreground); border-color: var(--accent); }
+
+.slider-control {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-family: var(--font-mono);
+  font-size: 0.58rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+}
+.slider-control input[type="range"] { width: 5.5rem; accent-color: var(--primary); }
+
+.chapter-layout {
+  position: relative;
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  gap: 1.25rem;
+  padding: 0 1.25rem;
+}
+
+.chapter-toc {
+  width: 230px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  padding-right: 1rem;
+  border-right: 1px solid var(--border);
+  min-height: 0;
+}
+.toc-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+}
+.toc-meta { color: color-mix(in oklab, var(--muted-foreground) 80%, transparent); }
+.toc-list {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  padding-bottom: 1rem;
+}
+.toc-item {
+  text-align: left;
+  font: inherit;
+  font-size: 0.8125rem;
+  line-height: 1.4;
+  flex-shrink: 0;
+  color: var(--muted-foreground);
+  background: transparent;
+  border: 0;
+  border-left: 2px solid transparent;
+  border-radius: 4px;
+  padding: 0.25rem 0.5rem;
+  cursor: pointer;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.toc-item:hover { color: var(--foreground); background: var(--muted); }
+.toc-item.lvl-2 { padding-left: 1.25rem; }
+.toc-item.lvl-3 { padding-left: 2rem; }
+.toc-item.active {
+  color: var(--primary);
+  background: color-mix(in oklab, var(--primary) 12%, transparent);
+  border-left-color: var(--primary);
+}
+
+.file-content-body {
+  flex: 1;
+  min-width: 0;
+  overflow-y: auto;
+  overflow-x: auto;
+  position: relative;
+  padding-bottom: 3rem;
+  padding-right: 0.5rem;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+#doc-md { min-width: 0; overflow-wrap: anywhere; }
+
+/* ── Markdown (port of the desktop viewer's rules) ────────────────────── */
+
+.file-content-body h1,
+.file-content-body h2,
+.file-content-body h3,
+.file-content-body h4,
+.file-content-body h5,
+.file-content-body h6 {
+  font-family: var(--font-sans);
+  font-weight: 600;
+  line-height: 1.3;
+  margin-top: 1.5em;
+  margin-bottom: 0.5em;
+  color: var(--foreground);
+}
+
+.file-content-body h1 {
+  font-size: 1.75em;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 0.3em;
+}
+
+.file-content-body h2 {
+  font-size: 1.4em;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 0.25em;
+}
+
+.file-content-body h3 { font-size: 1.2em; }
+.file-content-body h4 { font-size: 1.05em; }
+.file-content-body h5 { font-size: 0.95em; }
+.file-content-body h6 { font-size: 0.9em; color: var(--muted-foreground); }
+
+.file-content-body p {
+  margin-top: 0;
+  margin-bottom: 0.55em;
+  line-height: 1.75;
+}
+
+.file-content-body ul,
+.file-content-body ol {
+  margin-top: 0.5em;
+  margin-bottom: 0.55em;
+  padding-left: 2em;
+}
+
+.file-content-body li {
+  margin-bottom: 0.4em;
+  line-height: 1.75;
+}
+
+.file-content-body li > ul,
+.file-content-body li > ol {
+  margin-top: 0.25em;
+  margin-bottom: 0;
+}
+
+.file-content-body blockquote {
+  margin: 0 0 0.55em 0;
+  padding: 0.5em 1em;
+  border-left: 4px solid var(--primary);
+  background: oklch(from var(--primary) l c h / 0.06);
+  border-radius: 0 var(--radius) var(--radius) 0;
+  color: var(--muted-foreground);
+}
+
+.file-content-body blockquote p:last-child { margin-bottom: 0; }
+
+.file-content-body hr {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 1.5em 0;
+}
+
+.file-content-body table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0.55em 0;
+  font-family: var(--font-sans);
+  font-size: 0.9em;
+  line-height: 1.5;
+}
+
+.file-content-body thead { border-bottom: 2px solid var(--border); }
+
+.file-content-body th {
+  padding: 0.625em 1em;
+  text-align: left;
+  font-weight: 600;
+  color: var(--foreground);
+  white-space: nowrap;
+  background: oklch(from var(--card) l c h / 0.5);
+}
+
+.file-content-body td {
+  padding: 0.5em 1em;
+  border-bottom: 1px solid oklch(from var(--border) l c h / 0.5);
+  color: var(--foreground);
+  vertical-align: top;
+}
+
+.file-content-body tbody tr:hover { background: oklch(from var(--muted) l c h / 0.3); }
+.file-content-body tbody tr:last-child td { border-bottom: none; }
+
+/* ── KaTeX ── */
+.file-content-body .katex-display {
+  margin: 1.5em auto !important;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 0.75em 0;
+  text-align: center !important;
+  display: block;
+}
+
+.file-content-body .katex-display > .katex {
+  font-size: 1.15em;
+  text-align: center !important;
+}
+
+.file-content-body .katex {
+  font-size: 1.05em;
+  /* Stray dollar signs in OCR text can wrap whole sentences in one math run;
+     clamp inline math to the line and let it scroll. */
+  display: inline-block;
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  vertical-align: middle;
+}
+
+.file-content-body .katex-error {
+  color: inherit;
+  font-family: var(--font-mono);
+  font-size: 0.85em;
+}
+
+.file-content-body p:has(.katex-display) { text-align: center; }
+
+/* ── Markdown images ──
+   Block-level and centered (desktop parity); the figure-size slider is
+   natural width × --res-figure-scale, shrink only. */
+.file-content-body img {
+  display: block;
+  width: calc(var(--img-w) * var(--res-figure-scale, 1));
+  max-width: 100%;
+  height: auto;
+  border-radius: var(--radius);
+  margin: 0.5em auto 0.55em;
+  cursor: zoom-in;
+}
+
+.file-content-body img.res-img-loading {
+  width: 100%;
+  min-height: 9rem;
+  background: color-mix(in oklab, var(--muted) 30%, transparent);
+}
+
+.file-content-body img.res-img-error {
+  min-height: 4rem;
+  border: 1px dashed var(--destructive);
+  opacity: 0.75;
+}
+
+/* ── Reader blocks (one wrapper per top-level markdown block) ── */
+.reader-block { min-width: 0; }
+#doc-md > .reader-block:first-child > :first-child { margin-top: 0; }
+#doc-md > .reader-block:last-child > :last-child { margin-bottom: 0; }
+
+/* ── Code blocks (plain monospace) ── */
+.file-content-body pre {
+  margin-bottom: 0.55em;
+  border-radius: var(--radius);
+  background: var(--code-bg);
+  overflow: hidden;
+  white-space: pre-wrap;
+  word-break: break-word;
+  overflow-wrap: break-word;
+}
+
+.file-content-body pre code {
+  display: block;
+  padding: 1rem;
+  font-family: var(--font-mono);
+  font-size: 0.85em;
+  line-height: 1.6;
+  background: transparent !important;
+  white-space: pre-wrap;
+  word-break: break-word;
+  overflow-wrap: break-word;
+}
+
+.file-content-body code:not(pre code) {
+  font-family: var(--font-mono);
+  font-size: 0.85em;
+  background: var(--code-bg);
+  color: var(--foreground);
+  padding: 0.125rem 0.375rem;
+  border-radius: 0.25rem;
+}
+
+/* ── Task lists ── */
+.file-content-body ul.contains-task-list { list-style: none; padding-left: 0.5em; }
+.file-content-body .task-list-item { display: flex; align-items: flex-start; gap: 0.5em; }
+.file-content-body .task-list-item input[type="checkbox"] { margin-top: 0.35em; accent-color: var(--primary); }
+
+/* ── Definition lists ── */
+.file-content-body dl { margin: 0 0 0.55em 0; }
+.file-content-body dt { font-weight: 600; margin-top: 0.75em; }
+.file-content-body dd { margin-left: 1.5em; margin-bottom: 0.25em; }
+
+/* ── Notes panel ───────────────────────────────────────────────────────── */
+
+:root { --annotation-note: var(--primary); }
+
+.chapter-notes {
+  flex-shrink: 0;
+  width: 360px;
+  min-width: 260px;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  border-left: 1px solid var(--border);
+  background: var(--card);
+  padding-left: 0.9rem;
+}
+
+.notes-panel { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
+.notes-panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.55rem 0.7rem;
+  border-bottom: 1px solid var(--border);
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+}
+.notes-empty {
+  margin: 0.75rem;
+  color: var(--muted-foreground);
+  font-size: 0.75rem;
+  line-height: 1.5;
+}
+.notes-panel-list {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 0.6rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.note-card {
+  padding: 0.6rem 0.7rem;
+  background: var(--background);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  cursor: pointer;
+  font-size: 0.78rem;
+}
+.note-card:hover { border-color: var(--primary); }
+.note-text { margin: 0; line-height: 1.5; white-space: pre-wrap; }
+.note-quote {
+  margin: 0.35rem 0 0;
+  padding-left: 0.5rem;
+  border-left: 2px solid var(--annotation-note);
+  color: var(--muted-foreground);
+  font-size: 0.7rem;
+  font-style: italic;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.note-actions { display: flex; gap: 0.4rem; margin-top: 0.5rem; }
+.note-actions button {
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--muted-foreground);
+  font-family: var(--font-mono);
+  font-size: 0.55rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 0.15rem 0.4rem;
+  cursor: pointer;
+}
+.note-actions button:hover { color: var(--foreground); border-color: var(--accent); }
+.note-actions .danger:hover { color: var(--danger); border-color: var(--danger); }
+.note-flash { animation: note-flash 1.6s ease-out; }
+@keyframes note-flash {
+  0% { outline: 2px solid var(--ring); outline-offset: 2px; }
+  100% { outline: transparent; outline-offset: 2px; }
+}
+
+.annotation-highlight { cursor: pointer; border-radius: 2px; transition: background 0.15s; }
+.annotation-highlight.note {
+  background: color-mix(in oklab, var(--annotation-note) 22%, transparent);
+  border-bottom: 2px solid var(--annotation-note);
+}
+.annotation-highlight.note:hover { background: color-mix(in oklab, var(--annotation-note) 38%, transparent); }
+.annotation-highlight.highlight-flash { animation: highlight-flash 1.8s ease-out; }
+@keyframes highlight-flash {
+  0% { outline: 2px solid var(--ring); outline-offset: 2px; }
+  100% { outline: transparent; outline-offset: 2px; }
+}
+
+/* ── Selection toolbar and note popover ────────────────────────────────── */
+
+.annotation-toolbar {
+  position: fixed;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  gap: 0.125rem;
+  padding: 0.25rem;
+  background: var(--popover);
+  border: 1px solid var(--border);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+}
+.annotation-toolbar button {
+  border: 0;
+  background: transparent;
+  color: var(--foreground);
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 0.3rem 0.5rem;
+  cursor: pointer;
+}
+.annotation-toolbar button:hover {
+  background: color-mix(in oklab, var(--primary) 20%, transparent);
+  color: var(--primary);
+}
+
+.note-popover {
+  position: fixed;
+  z-index: 1001;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  padding: 0.65rem 0.7rem;
+  background: var(--popover);
+  border: 1px solid var(--border);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.45);
+}
+.popover-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+}
+.popover-quote {
+  margin: 0;
+  padding-left: 0.5rem;
+  border-left: 2px solid var(--annotation-note);
+  color: var(--muted-foreground);
+  font-size: 0.72rem;
+  font-style: italic;
+  max-height: 3.6em;
+  overflow: hidden;
+}
+.note-popover textarea {
+  width: 100%;
+  min-height: 5rem;
+  resize: vertical;
+  padding: 0.5rem;
+  background: var(--input);
+  border: 1px solid var(--border);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+  font-size: 0.82rem;
+  line-height: 1.5;
+  outline: none;
+}
+.note-popover textarea:focus { border-color: var(--accent); }
+.note-error { margin: 0; color: var(--danger); font-size: 0.7rem; }
+.popover-actions { display: flex; justify-content: flex-end; gap: 0.4rem; }
+.popover-actions button {
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--muted-foreground);
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 0.3rem 0.6rem;
+  cursor: pointer;
+}
+.popover-actions button:hover { color: var(--foreground); border-color: var(--accent); }
+.popover-actions .primary { border-color: var(--primary); color: var(--primary); }
+.popover-actions .primary:hover { background: color-mix(in oklab, var(--primary) 18%, transparent); }
+
+/* ── Lightbox ──────────────────────────────────────────────────────────── */
+
+.res-lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  display: grid;
+  place-items: center;
+  padding: 2.5rem;
+  background: rgba(0, 0, 0, 0.86);
+  cursor: zoom-out;
+}
+.res-lightbox img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  background: var(--background);
+  border: 1px solid var(--border);
+}
+
+/* ── Narrow screens: the panels become overlay sheets ──────────────────── */
+
+@media (max-width: 900px) {
+  .chapter-layout { padding: 0 0.8rem; gap: 0.6rem; }
+  .chapter-toc,
+  .chapter-notes {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    z-index: 45;
+    width: min(80%, 320px);
+    background: var(--card);
+    box-shadow: 0 0 24px rgba(0, 0, 0, 0.5);
+    padding: 0.6rem;
+    border-right: 0;
+    border-left: 0;
+  }
+  .chapter-toc { left: 0; border-right: 1px solid var(--border); }
+  .chapter-notes { right: 0; width: min(88%, 380px); border-left: 1px solid var(--border); }
+  .card-grid { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); }
+}
+
+@media (max-width: 620px) {
+  .level-header { flex-direction: column; align-items: flex-start; }
+  .res-tab { max-width: 11rem; }
+  .chapter-header { padding: 0.5rem 0.8rem; }
+}

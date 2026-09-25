@@ -212,8 +212,17 @@ pub struct ScanArgs {
 }
 
 #[derive(Debug, Args)]
-#[command(group = ArgGroup::new("action").required(true).multiple(false).args(["list", "read", "outline", "search"]))]
+#[command(group = ArgGroup::new("action").required(true).multiple(false).args(["vis", "list", "read", "outline", "search"]))]
 pub struct ResourcesArgs {
+    /// Serve the resource library as a read-only browser
+    #[arg(long)]
+    pub vis: bool,
+    /// With --vis: port to bind (default: an ephemeral port)
+    #[arg(long, value_name = "N")]
+    pub port: Option<u16>,
+    /// With --vis: don't open a browser
+    #[arg(long)]
+    pub no_open: bool,
     /// List the resource tree (one level by default)
     #[arg(long)]
     pub list: bool,
@@ -223,7 +232,7 @@ pub struct ResourcesArgs {
     /// With --list: include figure rel paths; with --read: print only figure lines
     #[arg(long)]
     pub figures: bool,
-    /// With --list/--search: list or search this folder instead of the root
+    /// With --list/--search/--vis: use this folder instead of the root
     #[arg(long, value_name = "DIR")]
     pub rel: Option<String>,
     /// Print a file's text
