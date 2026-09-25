@@ -383,7 +383,7 @@ fn latex_to_text(latex: &str) -> String {
     }
     s = convert_scripts(&s);
     s = strip_backslashes(&s);
-    s.replace('{', "").replace('}', "")
+    s.replace(['{', '}'], "")
 }
 
 /// `\cmd{inner}` -> `prefix + inner + suffix` (nested groups included).

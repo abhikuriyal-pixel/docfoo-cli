@@ -1,5 +1,6 @@
 /target
 .agent/
+__pycache__/
 node_modules/
 sidecar/node_modules/
 sidecar/docfoo-agent

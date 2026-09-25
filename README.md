@@ -254,8 +254,8 @@ docfoo update
 docfoo completions bash        # bash | zsh | fish | powershell | elvish
 ```
 
-Release artifacts are `docfoo-<version>-linux-x64.tar.gz` and
-`docfoo-<version>-windows-x64.zip` plus `.sha256` sidecars; `scripts/release.sh`
+Release artifacts are `docfoo-cli-<version>-linux-x64.tar.gz` and
+`docfoo-cli-<version>-windows-x64.zip` plus `.sha256` sidecars; `scripts/release.sh`
 and `scripts/release.ps1` build them locally. Set `DOCFOO_REPO` to your GitHub
 `owner/repo` before releasing.
 
