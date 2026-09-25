@@ -237,6 +237,9 @@ function resizeCanvases() {
     }
   }
   renderer.invalidate();
+  // The pane can start hidden (narrow Chat view): the first real size is the
+  // moment a skipped fit can finally run.
+  if (!renderer.fitted) renderer.fit();
 }
 
 const canvasSpec = () => {
@@ -1352,7 +1355,9 @@ function initControls() {
     } catch {
       // Storage disabled; the session still applies the toggle.
     }
-    renderer.invalidate();
+    // Labels change the fit budget; re-fit while the view is still pristine.
+    if (renderer.userAdjusted) renderer.invalidate();
+    else renderer.fit();
   });
 
   dom.themeButton.addEventListener('click', () => {
@@ -1421,8 +1426,27 @@ async function init() {
   initRenderer();
   initControls();
   showView('chat');
+  // Webfonts change label metrics after the first fit; re-fit once they land.
+  if (document.fonts && typeof document.fonts.ready?.then === 'function') {
+    document.fonts.ready.then(() => {
+      if (!renderer.userAdjusted) renderer.fit();
+    });
+  }
   await loadState();
 }
+
+// Dev hook (same spirit as the desktop's window.__kgVizTest): lets tooling
+// inspect the fitted transform and bounds without reaching into modules.
+window.__kgVizTest = {
+  get renderer() { return renderer; },
+  get graph() { return sceneGraph; },
+  get layout() { return sceneLayout; },
+  debug() {
+    const view = renderer?.getView();
+    const bounds = view && sceneLayout ? renderer.screenBounds(view.k) : null;
+    return { view, bounds, spec: canvasSpec(), fitted: renderer?.fitted, userAdjusted: renderer?.userAdjusted };
+  },
+};
 
 void init();
 

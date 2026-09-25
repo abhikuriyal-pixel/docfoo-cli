@@ -15,6 +15,8 @@ const LABEL_TOP_K = 12;
 const MAX_LABELS = 48;
 const ZOOM_MIN = 0.04;
 const ZOOM_MAX = 48;
+/** Largest scale the automatic fit will choose. */
+const FIT_MAX = 1.6;
 const PICK_SLOP = 6;
 const HOP_DECAY = 0.68;
 
@@ -43,6 +45,8 @@ export class VizRenderer {
 
     this.pendingRender = false;
     this.dragging = false;
+    this.fitted = false;
+    this.userAdjusted = false;
     this.onPanState = null;
     this.pointers = new Map();
     this.pinch = null;
@@ -59,6 +63,8 @@ export class VizRenderer {
     this.graph = graph;
     this.layout = layout;
     this.labelWidths.clear();
+    this.fitted = false;
+    this.userAdjusted = false;
     this.fit();
   }
 
@@ -89,26 +95,110 @@ export class VizRenderer {
     return { ...this.view };
   }
 
-  /** Fit the whole world into the canvas, centered, with a small margin. */
+  /**
+   * Fit the whole scene — node circles AND their hub-label plates — into the
+   * canvas. Labels are screen-constant, so the union bounds are monotone
+   * (non-decreasing) in the world scale; a binary search finds the largest
+   * scale whose bounds still fit the viewport.
+   */
   fit() {
     if (!this.layout || this.layout.width === 0) return;
     const spec = this.getSpec();
     if (!spec || spec.cssW === 0 || spec.cssH === 0) return;
-    const margin = 26;
-    const scale = Math.max(
-      ZOOM_MIN,
-      Math.min(
-        (spec.cssW - margin * 2) / this.layout.width,
-        (spec.cssH - margin * 2) / this.layout.height,
-        1.6,
-      ),
-    );
+    const margin = 18;
+    const availableWidth = spec.cssW - margin * 2;
+    const availableHeight = spec.cssH - margin * 2;
+    // Label metrics depend on the loaded webfont; a refit after fonts.ready
+    // must never reuse widths measured with the fallback face.
+    this.labelWidths.clear();
+    const fits = (scale) => {
+      const bounds = this.screenBounds(scale);
+      return (
+        bounds.maxX - bounds.minX <= availableWidth
+        && bounds.maxY - bounds.minY <= availableHeight
+      );
+    };
+
+    let scale = FIT_MAX;
+    if (!fits(scale)) {
+      let low = ZOOM_MIN;
+      let high = FIT_MAX;
+      for (let pass = 0; pass < 32; pass += 1) {
+        const mid = (low + high) / 2;
+        if (fits(mid)) low = mid;
+        else high = mid;
+      }
+      scale = low;
+    }
+
+    const bounds = this.screenBounds(scale);
+    const width = bounds.maxX - bounds.minX;
+    const height = bounds.maxY - bounds.minY;
     this.view = {
       k: scale,
-      x: (spec.cssW - this.layout.width * scale) / 2,
-      y: (spec.cssH - this.layout.height * scale) / 2,
+      x: (spec.cssW - width) / 2 - bounds.minX,
+      y: (spec.cssH - height) / 2 - bounds.minY,
     };
+    this.fitted = true;
     this.scheduleRender();
+  }
+
+  /** Union bounding box of the graph and its labels at world scale `scale`. */
+  screenBounds(scale) {
+    const bounds = {
+      minX: 0,
+      minY: 0,
+      maxX: this.layout.width * scale,
+      maxY: this.layout.height * scale,
+    };
+    for (const box of this.labelBoxes()) {
+      const x = box.x * scale;
+      const y = box.y * scale;
+      bounds.minX = Math.min(bounds.minX, x - box.halfWidth);
+      bounds.maxX = Math.max(bounds.maxX, x + box.halfWidth);
+      bounds.minY = Math.min(bounds.minY, y - box.halfHeight);
+      bounds.maxY = Math.max(bounds.maxY, y + box.halfHeight);
+    }
+    return bounds;
+  }
+
+  /** Nodes that receive a hub label (same set drawLabels paints). */
+  labelTargets() {
+    const hubs = this.layout.hubs || [];
+    const topK = [...this.graph.nodes.keys()]
+      .sort((a, b) => this.graph.nodes[b][3] - this.graph.nodes[a][3] || a - b)
+      .slice(0, LABEL_TOP_K);
+    return [...new Set([...hubs, ...topK])].slice(0, MAX_LABELS);
+  }
+
+  /** World-space label plates with screen-constant half sizes, for fit(). */
+  labelBoxes() {
+    const context = this.baseContext;
+    const graph = this.graph;
+    const layout = this.layout;
+    if (!context || !graph || !layout || !this.labelsOn()) return [];
+    context.save();
+    context.font = "500 11px 'JetBrains Mono', monospace";
+    const boxes = [];
+    for (const index of this.labelTargets()) {
+      const node = graph.nodes[index];
+      const point = layout.points[index];
+      if (!node || !point) continue;
+      const name = node[1];
+      let width = this.labelWidths.get(name);
+      if (width === undefined) {
+        width = context.measureText(name).width;
+        this.labelWidths.set(name, width);
+      }
+      boxes.push({
+        x: point.x,
+        y: point.y - point.r - 8,
+        halfWidth: width / 2 + 4,
+        halfHeight: 7.5,
+      });
+    }
+    context.restore();
+    return boxes;
   }
 
   // ── Gestures ────────────────────────────────────────────────────────────
@@ -159,6 +249,7 @@ export class VizRenderer {
 
   onWheel(event) {
     event.preventDefault();
+    this.userAdjusted = true;
     this.zoomAt(event.offsetX, event.offsetY, Math.exp(-event.deltaY * 0.0016));
   }
 
@@ -175,6 +266,7 @@ export class VizRenderer {
   }
 
   onPointerDown(event) {
+    this.userAdjusted = true;
     try {
       event.currentTarget.setPointerCapture(event.pointerId);
     } catch {
@@ -346,11 +438,7 @@ export class VizRenderer {
 
   /** Hub labels: bright ink on a backing plate, screen-constant size. */
   drawLabels(context, points, background, border, ink) {
-    const hubs = this.layout.hubs || [];
-    const topK = [...this.graph.nodes.keys()]
-      .sort((a, b) => this.graph.nodes[b][3] - this.graph.nodes[a][3] || a - b)
-      .slice(0, LABEL_TOP_K);
-    const targets = [...new Set([...hubs, ...topK])].slice(0, MAX_LABELS);
+    const targets = this.labelTargets();
 
     context.font = "500 11px 'JetBrains Mono', monospace";
     context.textBaseline = 'middle';
