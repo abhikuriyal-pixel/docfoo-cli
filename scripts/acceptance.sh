@@ -39,5 +39,12 @@ if [ -n "${DOCFOO_ACCEPTANCE_WORKSPACE:-}" ] && [ -n "${DOCFOO_ACCEPTANCE_QUERY:
     --workspace "$DOCFOO_ACCEPTANCE_WORKSPACE" --format slack --hermes-final
 fi
 
+if command -v node >/dev/null 2>&1; then
+  echo "== tests: vis frontend modules (node) =="
+  node --test crates/docfoo-cli/tests/js/*.test.mjs
+else
+  echo "== tests: vis frontend modules skipped (node not found) =="
+fi
+
 echo
 echo "all acceptance checks passed"

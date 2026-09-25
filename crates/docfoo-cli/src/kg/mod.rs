@@ -12,3 +12,4 @@ pub mod index;
 pub mod paths;
 pub mod query;
 pub mod settings;
+pub mod vis;

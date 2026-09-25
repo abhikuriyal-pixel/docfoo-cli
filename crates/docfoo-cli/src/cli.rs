@@ -126,7 +126,7 @@ impl Command {
 }
 
 #[derive(Debug, Args)]
-#[command(group = ArgGroup::new("action").required(true).multiple(false).args(["query", "index", "status"]))]
+#[command(group = ArgGroup::new("action").required(true).multiple(false).args(["query", "index", "status", "vis"]))]
 pub struct KgArgs {
     /// Ask the knowledge graph a question (one-shot final answer)
     #[arg(long, value_name = "QUESTION")]
@@ -137,6 +137,15 @@ pub struct KgArgs {
     /// Show built graphs and coverage
     #[arg(long)]
     pub status: bool,
+    /// Open the live knowledge-graph visualizer in a browser
+    #[arg(long)]
+    pub vis: bool,
+    /// With --vis: bind this port (default: an ephemeral port)
+    #[arg(long, value_name = "N")]
+    pub port: Option<u16>,
+    /// With --vis: do not open the browser automatically
+    #[arg(long)]
+    pub no_open: bool,
     /// Resource folder scope (empty = whole library)
     #[arg(long, value_name = "DIR", default_value = "")]
     pub scope: String,

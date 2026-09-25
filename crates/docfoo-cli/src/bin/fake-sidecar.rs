@@ -16,6 +16,9 @@ fn main() {
     let delay_ms: u64 = env_number("FAKE_SIDECAR_DELAY_MS");
     let exit_after: u64 = env_number("FAKE_SIDECAR_EXIT_AFTER");
     let fail = std::env::var("FAKE_SIDECAR_FAIL").is_ok();
+    // Synthesis answers are numbered so end-to-end tests can tell one turn
+    // from the next (a replayed stale frame is then visible as the wrong id).
+    let mut synthesis_count = 0u64;
 
     let stdout = std::io::stdout();
     let mut out = stdout.lock();
@@ -73,12 +76,13 @@ fn main() {
                 json!({ "type": "auth_logout_response", "requestId": request_id, "success": true }),
             ),
             "complete" => {
-                // KG synthesis requests carry the evidence block; answer with
-                // an [S1] tag so the crate's tag expansion is exercised.
+                // KG synthesis requests carry the evidence block; answer with a
+                // numbered line plus an [S1] tag so tag expansion is exercised.
                 let text = if request_contains(&value, "EVIDENCE:") {
-                    "Synthesized answer. [S1]"
+                    synthesis_count += 1;
+                    format!("Synthesized answer #{synthesis_count}. [S1]")
                 } else {
-                    "fake completion"
+                    "fake completion".to_string()
                 };
                 if value.get("stream").and_then(Value::as_bool) == Some(true) {
                     emit(

@@ -32,6 +32,13 @@ export DOCFOO_SIDECAR_BIN=/path/to/sidecar/docfoo-agent   # explicit binary
 export DOCFOO_SIDECAR_TS=/path/to/sidecar/main.ts         # run with bun
 ```
 
+The visualizer frontend is dependency-free ES modules embedded into the
+binary; its pure modules are tested with Node 22+:
+
+```bash
+node --test crates/docfoo-cli/tests/js/*.test.mjs
+```
+
 On Linux/WSL the sidecar can run as a persistent systemd user service
 (`scripts/docfoo-sidecar.service`); the CLI then connects to
 `<workspace>/.agent/sidecar.sock` instead of spawning a process per command.
@@ -65,6 +72,9 @@ docfoo kg --index --scope papers/ml
 # Show built graphs and counts
 docfoo kg --status [--scope DIR] [--json]
 
+# Open the live visualizer (loopback browser page; Ctrl-C stops the server)
+docfoo kg --vis [--scope DIR] [--port N] [--no-open]
+
 # Ask a question: one-shot final answer, no agent loop
 docfoo kg --query "How are the National Education Policy 2020 and the NCF connected?"
 
@@ -83,6 +93,16 @@ docfoo kg --query "..." --save
 Query flags: `--scope DIR`, `--model provider/model`, `--reasoning off|minimal|…|max`,
 `--stream` (synthesis deltas to stderr), `--save`, `--hermes-final`,
 `--plain-tables`, `--no-sources`, `--quote-sources`, `--max-chars N`.
+
+`kg --vis` serves an embedded page on `127.0.0.1` (ephemeral port by default;
+`--port N` pins one) and opens the default browser unless `--no-open` is given.
+It reproduces the desktop app's knowledge-graph window: the same deterministic
+canvas layout and query choreography (seed halos, traversal hop trails,
+escalation banners, evidence strip), a chat composer that streams the answer
+with citations, inline figures and GFM tables, a scope dropdown over every
+built graph, a session-only model picker, a fixed reasoning cycle, and a
+replay transport for the last turn. Queries are ephemeral — nothing is written
+to `kg-chats/` unless you use `kg --query --save`.
 
 ### Resources and notes (read-only)
 
@@ -248,9 +268,9 @@ so `hermes update` never wipes it. See [`hermes/README.md`](hermes/README.md).
 ## Roadmap
 
 All six plan stages are implemented. `scripts/acceptance.sh` runs the offline
-acceptance checks (build, tests, fresh-workspace smoke tests) and an optional
-live KG query when `DOCFOO_ACCEPTANCE_WORKSPACE` and `DOCFOO_ACCEPTANCE_QUERY`
-are set.
+acceptance checks (build, tests, fresh-workspace smoke tests, vis frontend
+module tests when Node is present) and an optional live KG query when
+`DOCFOO_ACCEPTANCE_WORKSPACE` and `DOCFOO_ACCEPTANCE_QUERY` are set.
 
 Possible follow-ups (out of v1 scope): `docfoo ask` (multi-step agent mode),
 Koofr cloud backup push/pull, community uploads, OAuth provider logins,

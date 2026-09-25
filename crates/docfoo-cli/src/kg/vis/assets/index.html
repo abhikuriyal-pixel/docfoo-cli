@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="dark">
+  <title>DocFoo — Knowledge Graph</title>
+  <link rel="stylesheet" href="/app.css">
+</head>
+<body data-theme="kinetic">
+  <header class="kg-header">
+    <div class="kg-title">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+        <circle cx="5" cy="6" r="2.2"/><circle cx="19" cy="5" r="2.2"/><circle cx="12" cy="18" r="2.2"/>
+        <path d="M7 7l3.4 8.8M17 6.8L13.6 16M7.1 5.9l9.8-.8"/>
+      </svg>
+      <strong>Knowledge graph</strong>
+    </div>
+
+    <div class="kg-header-controls">
+      <label class="scope-control" title="Active knowledge graph">
+        <span>Scope</span>
+        <select id="scope-select" aria-label="Active knowledge graph"></select>
+      </label>
+
+      <button type="button" class="model-button" id="model-button" aria-haspopup="dialog" aria-expanded="false" title="Model for KG queries">
+        <span class="model-provider" id="model-provider"></span>
+        <span class="model-name" id="model-name">no model</span>
+      </button>
+
+      <button type="button" class="thinking-button" id="reasoning-toggle" title="Toggle thinking level" aria-label="Thinking level: off">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+        </svg>
+        <span id="reasoning-level">off</span>
+      </button>
+
+      <button type="button" class="theme-button" id="theme-toggle" title="Switch to Art Deco" aria-label="Switch theme">
+        <span id="theme-label">Art Deco</span>
+      </button>
+    </div>
+
+    <div class="model-popover" id="model-popover" role="dialog" aria-label="Choose model" hidden>
+      <div class="model-popover-head">
+        <strong>Session model</strong>
+        <button type="button" class="mini-button" id="models-refresh" title="Refresh model catalog">↻</button>
+      </div>
+      <input id="model-search" class="model-search" type="search" placeholder="Filter models…" aria-label="Filter models">
+      <div class="model-list" id="model-list"></div>
+      <p class="model-error" id="model-error" hidden></p>
+      <p class="model-footnote">Applies to this page only — the shared model settings are not changed.</p>
+    </div>
+  </header>
+
+  <main class="kg-window-body viz-open" id="kg-body" data-kg-view="chat">
+    <div class="kg-viz-seg" id="kg-viz-seg" role="tablist" aria-label="KG view">
+      <button type="button" class="kg-viz-seg-btn" id="seg-chat" role="tab" aria-selected="true">Chat</button>
+      <button type="button" class="kg-viz-seg-btn" id="seg-graph" role="tab" aria-selected="false">Graph</button>
+    </div>
+
+    <aside class="kg-viz-pane" id="kg-viz-pane" aria-label="Live retrieval view">
+      <div class="kg-viz-statusbar">
+        <span class="kg-viz-pulse" id="kg-viz-pulse" aria-hidden="true"></span>
+        <span class="kg-viz-status" id="kg-viz-status" role="status">Idle</span>
+        <span class="kg-viz-meta" id="kg-viz-meta" hidden></span>
+      </div>
+
+      <div class="kg-viz-transport" id="kg-viz-transport" hidden>
+        <button type="button" class="kg-viz-tbtn" id="replay-playpause" title="Play / pause" aria-label="Play or pause replay">▶</button>
+        <input type="range" class="kg-viz-seek" id="replay-seek" min="0" max="0" step="1" value="0" aria-label="Scrub the replay">
+        <b class="kg-viz-tlabel" id="replay-label">0/0</b>
+        <button type="button" class="kg-viz-tbtn" id="replay-exit" title="Exit replay" aria-label="Exit replay">✕</button>
+      </div>
+
+      <div class="kg-viz-banner" id="kg-viz-banner" hidden>
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+          <path d="M12 3v11m0 0 3.5-3.5M12 14 8.5 10.5"/><path d="M4.5 17.5h15M7 21h10"/>
+        </svg>
+        <span class="kg-viz-banner-msg" id="kg-viz-banner-msg"></span>
+        <span class="kg-viz-chips" id="kg-viz-chips"></span>
+      </div>
+
+      <div class="kg-viz-stage" id="kg-viz-stage">
+        <canvas class="kg-viz-canvas" id="viz-base" aria-hidden="true"></canvas>
+        <canvas class="kg-viz-canvas" id="viz-top" aria-hidden="true"></canvas>
+        <div class="kg-viz-reticle" aria-hidden="true"></div>
+
+        <div class="kg-viz-overview" id="kg-viz-nograph" hidden>
+          <svg class="kg-viz-glyph" width="52" height="52" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="7" y="7" width="34" height="34" opacity=".4"/>
+            <path d="M15 21.5V33h11" opacity=".95"/>
+            <circle cx="15" cy="33" r="2"/><circle cx="26" cy="33" r="2"/>
+            <circle cx="33" cy="15" r="2"/><circle cx="19" cy="15" r="2"/>
+            <path d="M19 15h14" opacity=".35"/>
+          </svg>
+          <p class="kg-viz-kicker">No graph yet</p>
+          <p class="kg-viz-headline">Build the knowledge graph first</p>
+          <p class="kg-viz-sub">Run <code>docfoo kg --index</code> for this scope, then pick it from the scope menu.</p>
+        </div>
+
+        <div class="kg-viz-popover" id="kg-viz-popover" hidden>
+          <div class="kg-viz-pop-head">
+            <span class="kg-viz-pop-name" id="kg-viz-pop-name"></span>
+            <span class="kg-viz-chip" id="kg-viz-pop-type"></span>
+            <button type="button" class="kg-viz-tbtn" id="kg-viz-pop-close" title="Close">✕</button>
+          </div>
+          <div class="kg-viz-pop-body">
+            <p class="kg-viz-pop-meta" id="kg-viz-pop-meta"></p>
+            <p class="kg-viz-pop-desc" id="kg-viz-pop-desc"></p>
+            <p class="kg-viz-pop-sec-title">Linked sections</p>
+            <ul class="kg-viz-pop-sections" id="kg-viz-pop-sections"></ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="kg-viz-strip">
+        <div class="kg-viz-strip-head">
+          <span>Evidence sections</span>
+          <b id="kg-viz-evcount">—</b>
+        </div>
+        <ol class="kg-viz-strip-list" id="kg-viz-evlist"></ol>
+        <div class="kg-viz-strip-wait" id="kg-viz-evwait">awaits the first answer</div>
+      </div>
+
+      <div class="kg-viz-footer">
+        <span class="kg-viz-sizes" title="Node radius scales with degree" aria-hidden="true"><i></i><i></i><i></i></span>
+        <label class="kg-viz-labtoggle" title="Label key hubs on the canvas">
+          <input type="checkbox" id="kg-viz-labels" checked> Labels
+        </label>
+        <span class="kg-viz-swatches" aria-hidden="true">
+          <span title="Seed entities"><i class="kg-viz-sw kg-viz-sw-seed"></i>seeds</span>
+          <span title="Traversal hops"><i class="kg-viz-sw kg-viz-sw-hop"></i>hops</span>
+          <span title="Evidence &amp; reorder"><i class="kg-viz-sw kg-viz-sw-ev"></i>evidence</span>
+        </span>
+        <b class="kg-viz-triples" id="kg-viz-triples" title="Corpus triples used by this answer"></b>
+        <span class="kg-viz-summary" id="kg-viz-summary"></span>
+      </div>
+    </aside>
+
+    <section class="kg-chat-pane" id="kg-chat-pane" aria-label="Knowledge graph answers">
+      <div class="kg-chat-head">
+        <span>Independent corpus query</span>
+        <span class="kg-chat-scope" id="kgw-scope"></span>
+      </div>
+      <div class="chat-messages" id="kgw-msgs"></div>
+      <div class="kg-window-empty" id="kgw-empty" hidden>
+        <b>No knowledge graph for this scope</b>
+        <span>Pick another scope or run <code>docfoo kg --index</code>.</span>
+      </div>
+      <div class="kg-composer">
+        <div class="chat-input-row">
+          <textarea id="kgw-input" class="chat-input" rows="1" placeholder="Ask anything about your indexed scans…" spellcheck="false"></textarea>
+          <div class="chat-input-side">
+            <button type="button" class="chat-abort-btn" id="btn-kgw-stop" title="Stop generating" hidden>
+              <svg width="9" height="9" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="6" y="6" width="12" height="12" rx="1"/></svg> Stop
+            </button>
+            <button type="button" class="chat-send-btn" id="btn-kgw-ask" title="Ask the knowledge graph" aria-label="Ask the knowledge graph">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+            </button>
+          </div>
+        </div>
+        <div class="composer-hint">
+          Questions are independent · <span id="composer-model">no model selected</span>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <div class="kg-lightbox" id="kg-lightbox" hidden role="dialog" aria-modal="true" aria-label="Figure preview">
+    <button type="button" class="kg-lightbox-close" id="kg-lightbox-close" aria-label="Close figure">✕</button>
+    <img id="kg-lightbox-image" alt="">
+  </div>
+
+  <script type="module" src="/js/app.js"></script>
+</body>
+</html>

@@ -12,7 +12,6 @@ use docfoo_kg::graph::KnowledgeGraph;
 use docfoo_kg::llm::Reasoning;
 use serde_json::{json, Value};
 
-use crate::citations;
 use crate::cli::{Cli, KgArgs};
 use crate::config::ModelPreferences;
 use crate::error::{CliError, Result};
@@ -30,11 +29,14 @@ pub fn run(cli: &Cli, format: OutputFormat, workspace: &Workspace, args: &KgArgs
     if args.status {
         return run_status(format, workspace, &scope);
     }
+    if args.vis {
+        return kg::vis::run(workspace, args, &scope);
+    }
     if let Some(query) = &args.query {
         return run_query(cli, format, workspace, args, &scope, query);
     }
     Err(CliError::Usage(
-        "kg needs --query, --index or --status".to_string(),
+        "kg needs --query, --index, --status or --vis".to_string(),
     ))
 }
 
@@ -176,34 +178,35 @@ fn run_query(
     let client = sidecar.client()?;
 
     let stream = args.stream;
+    let mut on_stage = |_pass: u8, _event: docfoo_kg::query::StageEvent| {};
     let mut on_delta = |delta: &str| {
         if stream {
             eprint!("{delta}");
         }
     };
     let report = kg::query::run_query(
-        workspace, scope, query, &model, reasoning, client, &cancel, &mut on_delta,
+        workspace,
+        scope,
+        query,
+        &model,
+        reasoning,
+        client,
+        &cancel,
+        &mut on_stage,
+        &mut on_delta,
     )?;
     if stream {
         eprintln!();
     }
 
-    let answer = report.answer;
-    let citations = citations::tokenize(&answer);
-    let sources: Vec<Value> = serde_json::to_value(&report.trace.evidence_sections)
-        .ok()
-        .and_then(|value| value.as_array().cloned())
-        .unwrap_or_default();
-    let figures = render::extract_figures(&answer, &workspace.resources_dir());
-    let tables = render::extract_tables(&answer);
-    let routing = serde_json::to_value(&report.trace.routing).unwrap_or_else(|_| json!({}));
-
     let saved = if args.save {
+        let sources = kg::query::sources_value(&report.trace);
+        let routing = kg::query::routing_value(&report.trace);
         let saved = kg::chats::save_query(
             workspace,
             query,
-            &answer,
-            &Value::Array(sources.clone()),
+            &report.answer,
+            &Value::Array(sources),
             &routing,
             report.trace.total_seconds,
         )?;
@@ -212,31 +215,14 @@ fn run_query(
         None
     };
 
-    let data = json!({
-        "query": query,
-        "scope": scope,
-        "model": model,
-        "answer_markdown": answer,
-        "citations": citations,
-        "figures": figures,
-        "tables": tables,
-        "sources": sources,
-        "routing": routing,
-        "depth": report.trace.depth,
-        "guides": report.trace.guides,
-        "droppedCount": report.trace.budget_dropped,
-        "triples": report.trace.triples_used,
-        "timings": report.trace.timings,
-        "totalSecs": report.trace.total_seconds,
-        "saved": saved,
-    });
+    let data = kg::query::result_data(workspace, scope, query, &model, &report, saved.as_deref());
 
     match format {
         OutputFormat::Json => {
             output::success(format, "kg.query", &workspace.root.display().to_string(), data)
         }
         OutputFormat::Markdown => {
-            println!("{answer}");
+            println!("{}", report.answer);
             Ok(())
         }
         OutputFormat::Slack => {
@@ -248,7 +234,8 @@ fn run_query(
                 hermes_final: args.hermes_final,
                 resources_dir: &workspace.resources_dir(),
             };
-            let rendered = render::render_slack(&answer, &sources, &options);
+            let sources = kg::query::sources_value(&report.trace);
+            let rendered = render::render_slack(&report.answer, &sources, &options);
             print!("{rendered}");
             if !rendered.ends_with('\n') {
                 println!();
