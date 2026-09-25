@@ -8,7 +8,7 @@
   <link rel="stylesheet" href="/katex/katex.min.css">
   <link rel="stylesheet" href="/app.css">
 </head>
-<body data-theme="kinetic">
+<body data-theme="art-deco">
   <header class="kg-header">
     <div class="kg-title">
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
@@ -36,8 +36,20 @@
         <span id="reasoning-level">off</span>
       </button>
 
-      <button type="button" class="theme-button" id="theme-toggle" title="Switch to Art Deco" aria-label="Switch theme">
-        <span id="theme-label">Kinetic</span>
+      <span class="font-slider-wrapper" title="Answer text size">
+        <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="4 7 4 4 20 4 20 7"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/></svg>
+        <input type="range" class="font-slider" id="kg-font-slider" min="12" max="45" step="0.5" value="20" aria-label="Answer text size">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="4 7 4 4 20 4 20 7"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/></svg>
+      </span>
+
+      <span class="font-slider-wrapper" title="Figure size">
+        <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
+        <input type="range" class="font-slider" id="kg-figure-slider" min="25" max="100" step="5" value="65" aria-label="Figure size">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
+      </span>
+
+      <button type="button" class="theme-button" id="theme-toggle" title="Switch to Kinetic" aria-label="Switch theme">
+        <span id="theme-label">Art Deco</span>
       </button>
     </div>
 

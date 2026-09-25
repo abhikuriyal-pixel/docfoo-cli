@@ -78,6 +78,8 @@ const dom = {
   triples: byId('kg-viz-triples'),
   summary: byId('kg-viz-summary'),
   labelsInput: byId('kg-viz-labels'),
+  fontSlider: byId('kg-font-slider'),
+  figureSlider: byId('kg-figure-slider'),
   segChat: byId('seg-chat'),
   segGraph: byId('seg-graph'),
   transport: byId('kg-viz-transport'),
@@ -582,6 +584,7 @@ function createAssistant() {
 
 function paintBubble(bubble) {
   bubble.body.innerHTML = renderMarkdown(bubble.raw);
+  stampFigureWidths(bubble.body);
 }
 
 function finishWithMarkdown(bubble, markdown) {
@@ -1195,7 +1198,7 @@ function updateThemeUi() {
   dom.themeButton.setAttribute('aria-label', dom.themeButton.title);
 }
 
-let currentTheme = 'kinetic';
+let currentTheme = 'art-deco';
 const shellTheme = () => currentTheme;
 
 // ── Lightbox ──────────────────────────────────────────────────────────────
@@ -1253,6 +1256,67 @@ function resumeRunningQuery() {
   startPolling();
 }
 
+// ── Answer text + figure size sliders (desktop parity) ────────────────────
+
+// Ranges and the font default match `initKgFont`/`initKgFigure`; the figure
+// default is the middle of its range (the desktop starts it at max).
+const FONT_SLIDER = { key: 'docfoo-kg-vis-font', min: 12, max: 45, fallback: 20 };
+const FIGURE_SLIDER = { key: 'docfoo-kg-vis-figure', min: 25, max: 100, fallback: 65 };
+
+function storedSliderValue(config, fallback) {
+  try {
+    const raw = window.localStorage.getItem(config.key);
+    const value = Number(raw);
+    if (raw !== null && raw !== '' && Number.isFinite(value)) {
+      return Math.min(config.max, Math.max(config.min, value));
+    }
+  } catch {
+    // Storage disabled: use the default.
+  }
+  return fallback;
+}
+
+function saveSliderValue(config, value) {
+  try {
+    window.localStorage.setItem(config.key, String(value));
+  } catch {
+    // Session-only when storage is unavailable.
+  }
+}
+
+function initSliders() {
+  const font = storedSliderValue(FONT_SLIDER, FONT_SLIDER.fallback);
+  dom.fontSlider.value = String(font);
+  document.documentElement.style.setProperty('--kg-font-size', `${font}px`);
+  dom.fontSlider.addEventListener('input', () => {
+    const value = Number(dom.fontSlider.value);
+    if (!Number.isFinite(value)) return;
+    document.documentElement.style.setProperty('--kg-font-size', `${value}px`);
+    saveSliderValue(FONT_SLIDER, value);
+  });
+
+  const figure = storedSliderValue(FIGURE_SLIDER, FIGURE_SLIDER.fallback);
+  dom.figureSlider.value = String(figure);
+  document.documentElement.style.setProperty('--kg-figure-scale', String(figure / 100));
+  dom.figureSlider.addEventListener('input', () => {
+    const value = Number(dom.figureSlider.value);
+    if (!Number.isFinite(value)) return;
+    document.documentElement.style.setProperty('--kg-figure-scale', String(value / 100));
+    saveSliderValue(FIGURE_SLIDER, value);
+  });
+}
+
+/** Stamp natural widths so the figure slider can scale images down. */
+function stampFigureWidths(root) {
+  for (const image of root.querySelectorAll('img.kg-figure')) {
+    const stamp = () => {
+      if (image.naturalWidth > 0) image.style.setProperty('--img-w', `${image.naturalWidth}px`);
+    };
+    if (image.complete) stamp();
+    else image.addEventListener('load', stamp, { once: true });
+  }
+}
+
 function initRenderer() {
   renderer = new VizRenderer({ getSpec: canvasSpec, labelsOn: () => dom.labelsInput.checked });
   renderer.baseContext = dom.baseCanvas.getContext('2d');
@@ -1275,6 +1339,7 @@ function initRenderer() {
 function initControls() {
   currentTheme = applyTheme(readTheme(window.localStorage), dom.body);
   updateThemeUi();
+  initSliders();
 
   try {
     dom.labelsInput.checked = window.localStorage.getItem('docfoo-kg-vis-labels') !== '0';

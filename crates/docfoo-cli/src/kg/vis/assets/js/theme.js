@@ -4,14 +4,14 @@ export const THEME_STORAGE_KEY = 'docfoo-kg-vis-theme';
 export const THEMES = ['kinetic', 'art-deco'];
 
 export function normalizeTheme(value) {
-  return THEMES.includes(value) ? value : 'kinetic';
+  return THEMES.includes(value) ? value : 'art-deco';
 }
 
 export function readTheme(storage) {
   try {
     return normalizeTheme(storage && storage.getItem(THEME_STORAGE_KEY));
   } catch {
-    return 'kinetic';
+    return 'art-deco';
   }
 }
 
