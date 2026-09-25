@@ -220,7 +220,7 @@ async function main(): Promise<void> {
   }
 
   fallbackTarget = process.stdout;
-  emit({ type: "ready", version: "0.1.2" });
+  emit({ type: "ready", version: "0.1.3" });
 
   const lines = createInterface({ input: process.stdin, terminal: false });
   lines.on("line", (line) => dispatch(null, line));

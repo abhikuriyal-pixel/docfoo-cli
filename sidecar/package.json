@@ -1,7 +1,7 @@
 {
   "name": "docfoo-agent",
   "private": true,
-  "version": "0.1.2",
+  "version": "0.1.3",
   "type": "module",
   "description": "DocFoo CLI model-completion sidecar (Pi ModelRuntime over JSONL)",
   "dependencies": {
