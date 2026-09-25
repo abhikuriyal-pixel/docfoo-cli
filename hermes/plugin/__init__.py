@@ -2,7 +2,7 @@
 
 Parts:
 
-1. A **direct trigger route**: a message containing the word ``dofoq``
+1. A **direct trigger route**: a message containing the word ``dfq``
    (case-insensitive) is answered by the CLI directly, before the model runs.
 2. A ``run_tool_round`` wrapper so a tool result starting with
    ``[[hermes:final]]`` becomes the final answer instead of being sent back to
@@ -30,7 +30,7 @@ PLUGIN_DIR = Path(__file__).resolve().parent
 CONFIG_PATH = PLUGIN_DIR / "config.json"
 SKILL_PATH = PLUGIN_DIR / "SKILL.md"
 DEFAULT_BIN = "docfoo"
-DEFAULT_TRIGGER = "dofoq"
+DEFAULT_TRIGGER = "dfq"
 
 
 def load_config() -> dict:
@@ -52,7 +52,7 @@ def load_config() -> dict:
 
 
 # --- direct trigger route ---------------------------------------------------
-# A message containing the trigger word (default "dofoq", case-insensitive) is
+# A message containing the trigger word (default "dfq", case-insensitive) is
 # answered by the CLI directly: the gateway hook runs the command and sends the
 # result, so the message never reaches the model.
 
@@ -169,7 +169,7 @@ def _on_pre_gateway_dispatch(event=None, gateway=None, session_store=None, **kwa
         return None
     loop.create_task(_answer_direct(gateway, event, question))
     logger.info("docfoo_plugin: direct trigger route (%d chars)", len(question))
-    return {"action": "skip", "reason": "dofoq trigger route"}
+    return {"action": "skip", "reason": "dfq trigger route"}
 
 
 def _sentinel_payload(text):

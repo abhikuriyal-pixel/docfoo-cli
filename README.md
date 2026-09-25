@@ -4,7 +4,7 @@ Barebones, scriptable DocFoo for the shell and for agents (Hermes/Slack).
 
 > **Status:** All stages complete (1-6), 133 tests green, clippy clean. See
 > `PLAN.md` for the architecture and `docs/HERMES.md` for the Hermes/Slack
-> integration (plugin, `dofoq` trigger routing, rich Slack rendering,
+> integration (plugin, `dfq` trigger routing, rich Slack rendering,
 > persistent sidecar, custom providers).
 
 ## Build

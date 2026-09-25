@@ -12,7 +12,7 @@ The plugin is the entire Hermes integration — no skill install, no
   makes the second (paraphrase) model call. It unwraps Hermes' terminal
   envelope `{"output": "...", "exit_code": 0, "error": null}`;
 - a **direct trigger route** (see below): messages containing the word
-  `dofoq` (any case) skip the model entirely.
+  `dfq` (any case) skip the model entirely.
 
 ## Install (once per machine)
 
@@ -42,16 +42,16 @@ Hermes gateway afterwards** so a running process picks up the new plugin.
 
 ## Direct trigger route (no model call)
 
-Any incoming message containing the word **dofoq** (any case: `Dofoq`, `DoFoq`,
-`DOFOQ`) is intercepted by a `pre_gateway_dispatch` hook and answered by the
-CLI directly: the message never reaches the model, so the only latency is
+Any incoming message containing the word **dfq** (any case: `Dfq`, `DFQ`) is
+intercepted by a `pre_gateway_dispatch` hook and answered by the CLI directly:
+the message never reaches the model, so the only latency is
 docfoo's synthesis (~6s) instead of synthesis + Hermes' tool-selection call
 (~12-19s). The reply is delivered through the platform adapter — typing
 indicator, markdown, `MEDIA:` figures — and authorization is still checked.
 Messages starting with `/` are left to the normal command registry.
 
 ```
-dofoq what is the Universal Patch Encoder?
+dfq what is the Universal Patch Encoder?
 ```
 
 Normal mentions of docfoo ("can you change docfoo's model?", "scan and index

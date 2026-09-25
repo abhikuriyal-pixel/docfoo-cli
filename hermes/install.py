@@ -9,7 +9,7 @@
 The plugin lives in ``<hermes-home>/plugins/docfoo_plugin/`` (default
 ``~/.hermes``) and also installs an advertised skill at
 ``<hermes-home>/skills/docfoo/SKILL.md``. The plugin answers messages that
-contain the ``dofoq`` trigger with the CLI directly (before the model runs)
+contain the ``dfq`` trigger with the CLI directly (before the model runs)
 and wraps ``run_tool_round`` so a ``[[hermes:final]]`` tool result becomes the
 final answer; the skill tells Hermes that ``docfoo`` is on PATH and how to
 configure it, so it never searches the filesystem. Both survive
@@ -67,7 +67,7 @@ def main() -> int:
     parser.add_argument("--workspace", help="DocFoo workspace (e.g. the desktop app's db folder)")
     parser.add_argument("--model", help="provider/model for kg queries")
     parser.add_argument("--scope", help="default kg scope (a resource folder; omit for the whole library)")
-    parser.add_argument("--trigger", help="word that routes a message straight to the CLI (default: dofoq)")
+    parser.add_argument("--trigger", help="word that routes a message straight to the CLI (default: dfq)")
     parser.add_argument("--reasoning", help="thinking level for kg queries (off, minimal, low, medium, high, xhigh, max)")
     parser.add_argument("--bin", help="docfoo executable name or path (default: docfoo on PATH)")
     parser.add_argument("--check", action="store_true", help="Only report whether the plugin is installed")

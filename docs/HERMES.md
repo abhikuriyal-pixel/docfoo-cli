@@ -72,7 +72,7 @@ The plugin is the entire Hermes integration — no skill install, no
 `soul.md`/persona edit, no core patch. At load time it registers three things:
 
 1. **A direct trigger route** — the only query path. Any message containing
-   the word `dofoq` (case-insensitive: `dofoq`, `Dofoq`, `DoFoq`, …) is
+   the word `dfq` (case-insensitive: `dfq`, `Dfq`, `DFQ`, …) is
    intercepted by a `pre_gateway_dispatch` hook and answered by the CLI
    directly. The message never reaches the model, so the only latency left is
    docfoo's synthesis (~6s). The reply goes through the platform adapter with
