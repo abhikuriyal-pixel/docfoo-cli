@@ -26,32 +26,43 @@ export function imageSrc(rel) {
   return `/api/asset?path=${encodeURIComponent(rel)}`;
 }
 
-/** Breadcrumbs: back arrow, root, then one segment per folder. */
-export function renderCrumbs(container, rel, onNavigate) {
+const CHEVRON_LEFT = `<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"/></svg>`;
+const CHEVRON_SEP = `<svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 18 15 12 9 6"/></svg>`;
+const HOME_ICON = `<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/></svg>`;
+
+/**
+ * Breadcrumbs: the desktop's chevron `icon-btn` back control, a home icon on
+ * the root segment, then one segment per folder. `handlers` is
+ * `{ onNavigate(path), onBack(), canGoBack }`.
+ */
+export function renderCrumbs(container, rel, handlers = {}) {
+  const { onNavigate, onBack, canGoBack = false } = handlers;
   container.textContent = '';
+
   const back = document.createElement('button');
   back.type = 'button';
-  back.className = 'breadcrumb-back';
-  back.title = 'Back to the library';
-  back.setAttribute('aria-label', 'Back to the library');
-  back.textContent = '←';
-  back.addEventListener('click', () => onNavigate(''));
+  back.className = 'icon-btn';
+  back.title = 'Back';
+  back.setAttribute('aria-label', 'Back');
+  back.innerHTML = CHEVRON_LEFT;
+  back.disabled = !canGoBack;
+  if (canGoBack) back.addEventListener('click', () => onBack?.());
   container.appendChild(back);
 
   const segments = String(rel ?? '').split('/').filter(Boolean);
-  const root = document.createElement('button');
-  root.type = 'button';
-  root.className = `breadcrumb-item${segments.length === 0 ? ' current' : ''}`;
-  root.textContent = 'Resources';
-  root.disabled = segments.length === 0;
-  if (segments.length > 0) root.addEventListener('click', () => onNavigate(''));
-  container.appendChild(root);
+  const home = document.createElement('button');
+  home.type = 'button';
+  home.className = `breadcrumb-item home${segments.length === 0 ? ' current' : ''}`;
+  home.innerHTML = `${HOME_ICON}<span>Resources</span>`;
+  home.disabled = segments.length === 0;
+  if (segments.length > 0) home.addEventListener('click', () => onNavigate?.(''));
+  container.appendChild(home);
 
   let path = '';
   segments.forEach((segment, index) => {
     const separator = document.createElement('span');
     separator.className = 'breadcrumb-sep';
-    separator.textContent = '›';
+    separator.innerHTML = CHEVRON_SEP;
     container.appendChild(separator);
 
     path = path ? `${path}/${segment}` : segment;
@@ -61,7 +72,7 @@ export function renderCrumbs(container, rel, onNavigate) {
     button.className = `breadcrumb-item${last ? ' current' : ''}`;
     button.textContent = segment;
     button.disabled = last;
-    if (!last) button.addEventListener('click', () => onNavigate(path));
+    if (!last) button.addEventListener('click', () => onNavigate?.(path));
     container.appendChild(button);
   });
 }

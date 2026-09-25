@@ -108,18 +108,10 @@ body[data-theme="art-deco"] .res-header {
   white-space: nowrap;
 }
 
-.breadcrumb-back {
-  border: 0;
-  background: transparent;
-  color: var(--muted-foreground);
-  font: inherit;
-  font-size: 0.85rem;
-  padding: 0 0.3rem;
-  cursor: pointer;
-}
-.breadcrumb-back:hover { color: var(--foreground); }
-
 .breadcrumb-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
   border: 0;
   background: transparent;
   color: var(--muted-foreground);
@@ -129,9 +121,15 @@ body[data-theme="art-deco"] .res-header {
   cursor: pointer;
   border-radius: 2px;
 }
+.breadcrumb-item svg { width: 12px; height: 12px; }
 .breadcrumb-item:hover:not(:disabled) { color: var(--foreground); background: var(--muted); }
 .breadcrumb-item.current { color: var(--foreground); font-weight: 600; cursor: default; }
-.breadcrumb-sep { color: var(--muted-foreground); font-size: 0.7rem; }
+.breadcrumb-sep {
+  display: inline-flex;
+  align-items: center;
+  color: var(--muted-foreground);
+}
+.breadcrumb-sep svg { width: 11px; height: 11px; }
 
 /* ── Library level ─────────────────────────────────────────────────────── */
 
@@ -166,8 +164,11 @@ body[data-theme="art-deco"] .level-heading h2 {
 /* ── Cards ─────────────────────────────────────────────────────────────── */
 
 .card-grid {
+  /* One fixed card height, exactly like the desktop resources grid. */
+  --res-card-height: 21.25rem;
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  align-items: start;
   gap: 1rem;
 }
 
@@ -175,20 +176,21 @@ body[data-theme="art-deco"] .level-heading h2 {
   position: relative;
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
-  aspect-ratio: 1 / 1;
-  padding: 1rem;
+  gap: 0;
+  height: var(--res-card-height);
+  min-height: 0;
+  padding: 1.125rem;
   background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
+  border: 1px solid color-mix(in oklab, var(--foreground) 13%, transparent);
+  border-radius: 0.75rem;
+  overflow: hidden;
   cursor: pointer;
-  transition: transform 0.12s, border-color 0.12s, box-shadow 0.12s;
+  transition: transform 0.12s, border-color 0.12s;
 }
 .res-card:hover,
 .res-card:focus-visible {
-  transform: translateY(-2px);
-  border-color: var(--primary);
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
+  transform: translateY(-1px);
+  border-color: color-mix(in oklab, var(--foreground) 28%, transparent);
   outline: none;
 }
 
@@ -196,7 +198,6 @@ body[data-theme="art-deco"] .level-heading h2 {
   position: relative;
   flex: 1 1 auto;
   min-height: 0;
-  margin-bottom: 0.4rem;
   border-radius: 0.5rem;
   overflow: hidden;
   background: var(--muted);
@@ -238,20 +239,27 @@ body[data-theme="art-deco"] .level-heading h2 {
   user-select: none;
 }
 
-.res-card-body { display: flex; flex-direction: column; gap: 0.2rem; min-width: 0; }
+.res-card-body { display: flex; flex-direction: column; gap: 0.2rem; min-width: 0; margin-top: 0.7rem; }
 .res-card-name {
   margin: 0;
-  font-size: 0.82rem;
-  font-weight: 600;
+  font-size: 1.25rem;
+  font-weight: 700;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 .res-card-meta {
   margin: 0;
   font-family: var(--font-mono);
-  font-size: 0.6rem;
+  font-size: 0.8125rem;
+  line-height: 1.4;
   color: var(--muted-foreground);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .res-card-kind {
   position: absolute;
@@ -367,18 +375,52 @@ body[data-theme="art-deco"] .chapter-header-info h1 {
   cursor: pointer;
 }
 .icon-btn:hover { color: var(--foreground); border-color: var(--accent); }
+.icon-btn:disabled { opacity: 0.4; cursor: default; }
+.icon-btn:disabled:hover { color: var(--muted-foreground); border-color: var(--border); }
 
-.slider-control {
-  display: inline-flex;
+/* ── Sliders (port of the desktop reader's font-slider) ────────────────── */
+.font-slider-wrapper {
+  display: flex;
   align-items: center;
-  gap: 0.35rem;
-  font-family: var(--font-mono);
-  font-size: 0.58rem;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+  gap: 0.25rem;
+  margin-left: 0.5rem;
+  padding-left: 0.5rem;
+  border-left: 1px solid var(--border);
   color: var(--muted-foreground);
 }
-.slider-control input[type="range"] { width: 5.5rem; accent-color: var(--primary); }
+
+.font-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 60px;
+  height: 4px;
+  background: var(--border);
+  border-radius: 2px;
+  outline: none;
+  cursor: pointer;
+}
+
+.font-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--primary);
+  border: 2px solid var(--card);
+  cursor: pointer;
+  transition: transform 0.1s;
+}
+
+.font-slider::-webkit-slider-thumb:hover { transform: scale(1.2); }
+
+.font-slider::-moz-range-thumb {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--primary);
+  border: 2px solid var(--card);
+  cursor: pointer;
+}
 
 .chapter-layout {
   position: relative;
@@ -899,7 +941,7 @@ body[data-theme="art-deco"] .chapter-header-info h1 {
   }
   .chapter-toc { left: 0; border-right: 1px solid var(--border); }
   .chapter-notes { right: 0; width: min(88%, 380px); border-left: 1px solid var(--border); }
-  .card-grid { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); }
+  .card-grid { --res-card-height: 14rem; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); }
 }
 
 @media (max-width: 620px) {

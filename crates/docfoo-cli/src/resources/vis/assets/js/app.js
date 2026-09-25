@@ -35,7 +35,6 @@ const dom = {
   empty: el('empty'),
   browserError: el('browser-error'),
   tabs: el('tabs'),
-  back: el('back'),
   docTitle: el('doc-title'),
   docError: el('doc-error'),
   tocToggle: el('toc-toggle'),
@@ -154,6 +153,13 @@ dom.figureSlider.addEventListener('input', () => {
 
 // ── Library ─────────────────────────────────────────────────────────────────
 
+/** Folder of a resource rel path: "Book/content.md" → "Book". */
+function parentRel(rel) {
+  const parts = String(rel ?? '').split('/').filter(Boolean);
+  parts.pop();
+  return parts.join('/');
+}
+
 async function loadLevel(rel) {
   state.rel = rel;
   state.active = null;
@@ -162,8 +168,13 @@ async function loadLevel(rel) {
   dom.browserError.hidden = true;
   try {
     const level = await api.getLevel(rel);
+    const normalized = level.rel ?? rel;
     state.entries = level.entries;
-    renderCrumbs(dom.crumbs, level.rel ?? rel, loadLevel);
+    renderCrumbs(dom.crumbs, normalized, {
+      onNavigate: loadLevel,
+      onBack: () => loadLevel(parentRel(normalized)),
+      canGoBack: normalized !== '',
+    });
     dom.levelTitle.textContent = levelTitle(level.rel ?? rel);
     dom.levelDesc.textContent = levelDescription(level.entries);
     renderGrid(dom.grid, level.entries, picker, { onOpen: openEntry });
@@ -284,6 +295,13 @@ async function openDoc(rel, name) {
   dom.docBody.scrollTop = 0;
   noteController.setResource(rel);
 
+  const folder = parentRel(rel);
+  renderCrumbs(dom.crumbs, folder, {
+    onNavigate: loadLevel,
+    onBack: () => loadLevel(parentRel(folder)),
+    canGoBack: true,
+  });
+
   try {
     const [resource, noteData] = await Promise.all([api.getResource(rel), api.getNotes(rel)]);
     if (state.active !== rel) return;
@@ -329,8 +347,6 @@ function closeDoc(rel) {
     showBrowser();
   }
 }
-
-dom.back.addEventListener('click', showBrowser);
 
 // ── Panels and lightbox ─────────────────────────────────────────────────────
 
