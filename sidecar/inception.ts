@@ -81,12 +81,19 @@ function modelConfig(entry: InceptionModel): ProviderModelConfig | null {
       typeof entry.context_length === "number" ? entry.context_length : DEFAULT_CONTEXT_WINDOW,
     maxTokens:
       typeof entry.max_output_length === "number" ? entry.max_output_length : DEFAULT_MAX_TOKENS,
-    ...(reasoning
-      ? {
-          compat: {
+    compat: {
+      // The Inception gateway rejects pi's `developer` system role.
+      supportsDeveloperRole: false,
+      ...(reasoning
+        ? {
             supportsReasoningEffort: true,
             maxTokensField: "max_completion_tokens",
-          },
+            thinkingFormat: "openai",
+          }
+        : {}),
+    },
+    ...(reasoning
+      ? {
           thinkingLevelMap: {
             off: null,
             minimal: "low",

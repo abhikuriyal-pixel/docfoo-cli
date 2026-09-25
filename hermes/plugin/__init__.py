@@ -31,6 +31,8 @@ CONFIG_PATH = PLUGIN_DIR / "config.json"
 SKILL_PATH = PLUGIN_DIR / "SKILL.md"
 DEFAULT_BIN = "docfoo"
 DEFAULT_TRIGGER = "dfq"
+CLI_TIMEOUT_SECONDS = 120
+MAX_ERROR_CHARS = 800
 
 
 def load_config() -> dict:
@@ -78,7 +80,7 @@ def _run_cli(cfg: dict, question: str) -> str:
         argv += ["--reasoning", cfg["reasoning"]]
     argv += ["--format", "slack", "--hermes-final", "--no-sources"]
     try:
-        proc = subprocess.run(argv, capture_output=True, text=True, timeout=300)
+        proc = subprocess.run(argv, capture_output=True, text=True, timeout=CLI_TIMEOUT_SECONDS)
     except Exception as exc:
         return f"docfoo failed: {exc}"
     out = (proc.stdout or "").lstrip()
@@ -86,6 +88,8 @@ def _run_cli(cfg: dict, question: str) -> str:
         out = out[len(SENTINEL):].lstrip("\n")
     if proc.returncode != 0 or not out.strip():
         detail = (proc.stderr or "").strip() or "no output"
+        if len(detail) > MAX_ERROR_CHARS:
+            detail = detail[:MAX_ERROR_CHARS].rstrip() + " …"
         return f"docfoo failed: {detail}"
     return out
 
