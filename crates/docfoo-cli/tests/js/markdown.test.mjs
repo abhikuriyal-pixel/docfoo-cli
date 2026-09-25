@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { renderMarkdown, rewriteFigureSrc } from '../../src/kg/vis/assets/js/markdown.js';
+import { renderMarkdown, rewriteFigureSrc } from '../../src/web/assets/js/markdown.js';
 
 /** Minimal KaTeX stand-in so math extraction can be asserted without a DOM. */
 function withFakeKatex(run) {
@@ -44,6 +44,53 @@ test('figures rewrite to the loopback asset endpoint and paths are decoded', () 
   assert.ok(html.includes('class="kg-figure"'), html);
   assert.ok(html.includes('src="/api/asset?path=Book%2Fassets%2Ff%25201.png"'), html);
   assert.ok(html.includes('alt="Chart"'));
+});
+
+test('figures resolve relative to the document folder when baseDir is given', () => {
+  assert.equal(rewriteFigureSrc('assets/f.png', 'Book'), '/api/asset?path=Book%2Fassets%2Ff.png');
+  assert.equal(rewriteFigureSrc('./assets/f.png', 'a/b'), '/api/asset?path=a%2Fb%2Fassets%2Ff.png');
+  assert.equal(rewriteFigureSrc('../shared/f.png', 'a/b'), '/api/asset?path=a%2Fshared%2Ff.png');
+  assert.equal(rewriteFigureSrc('https://example.com/f.png', 'Book'), 'https://example.com/f.png');
+
+  const html = renderMarkdown('![Fig](assets/f.png)', { baseDir: 'Book' });
+  assert.ok(html.includes('src="/api/asset?path=Book%2Fassets%2Ff.png"'), html);
+  // Tables and lists inherit the same base.
+  const table = renderMarkdown('| A |\n| --- |\n| ![F](assets/t.png) |', { baseDir: 'Dir' });
+  assert.ok(table.includes('/api/asset?path=Dir%2Fassets%2Ft.png'), table);
+});
+
+test('sourceLines stamps data-line for notes and the outline', () => {
+  const markdown = [
+    '# Title',
+    '',
+    'Para one',
+    'still one',
+    '',
+    '```js',
+    '# not a heading',
+    '```',
+    '',
+    '> quote',
+    '',
+    '| A |',
+    '| --- |',
+    '| 1 |',
+  ].join('\n');
+  const html = renderMarkdown(markdown, { sourceLines: true });
+  assert.ok(html.includes('<h1 data-line="1">'), html);
+  assert.ok(html.includes('<p data-line="3">'), html);
+  assert.ok(html.includes('<pre data-line="6">'), html);
+  assert.ok(html.includes('<blockquote data-line="10">'), html);
+  assert.ok(html.includes('<table data-line="12">'), html);
+  // The default output stays free of line stamps.
+  assert.ok(!renderMarkdown(markdown).includes('data-line'));
+});
+
+test('math and code spanning lines keep later block lines stable', () => {
+  const markdown = ['$$', 'x', '$$', '', 'After', '', '`a', 'b`'].join('\n');
+  const html = renderMarkdown(markdown, { sourceLines: true });
+  assert.ok(html.includes('<p data-line="5">'), html);
+  assert.ok(html.includes('<p data-line="7">'), html);
 });
 
 test('tables, lists, code fences and headings render as blocks', () => {

@@ -19,7 +19,6 @@
 //! responses (8 KB) and cannot stream SSE; the cursor endpoint is the same
 //! event log with a tiny poll loop on the page.
 
-use std::io::Read;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
@@ -28,11 +27,12 @@ use docfoo_kg::llm::Reasoning;
 use docfoo_kg::query::StageEvent;
 use serde::Deserialize;
 use serde_json::{json, Value};
-use tiny_http::{Header, Method, Request, Response, ResponseBox, StatusCode};
+use tiny_http::{Method, Request, Response, ResponseBox, StatusCode};
 
 use crate::error::Result;
 use crate::kg::{paths, query};
 use crate::sidecar::{ProviderInfo, Sidecar, SidecarClient};
+use crate::web::http::{error_response, header, json_response, query_param, read_body, split_url};
 use crate::workspace::Workspace;
 
 use super::assets;
@@ -126,7 +126,11 @@ fn route(request: &mut Request, state: &Arc<ServerState>) -> ResponseBox {
     match (&method, path) {
         (Method::Get, "/") | (Method::Get, "/index.html") => assets::serve("index.html"),
         (Method::Get, "/app.css") => assets::serve("app.css"),
-        (Method::Get, other) if other.starts_with("/js/") || other.starts_with("/katex/") => {
+        (Method::Get, other)
+            if other.starts_with("/js/")
+                || other.starts_with("/katex/")
+                || other == "/base.css" =>
+        {
             assets::serve(other.trim_start_matches('/'))
         }
 
@@ -203,7 +207,7 @@ fn api_asset(query_string: Option<&str>, state: &Arc<ServerState>) -> ResponseBo
     let Some(rel) = query_param(query_string, "path") else {
         return error_response(400, "missing path");
     };
-    match assets::resolve_resource(&state.workspace, &rel) {
+    match crate::web::assets::resolve_resource(&state.workspace, &rel) {
         Some((path, mime)) => match std::fs::read(&path) {
             Ok(bytes) => Response::from_data(bytes)
                 .with_status_code(StatusCode(200))
@@ -251,7 +255,7 @@ struct QueryBody {
 }
 
 fn api_query(request: &mut Request, state: &Arc<ServerState>) -> ResponseBox {
-    let body = match read_body(request) {
+    let body = match read_body(request, MAX_BODY_BYTES) {
         Ok(body) => body,
         Err(message) => return error_response(400, &message),
     };
@@ -391,13 +395,6 @@ fn parse_reasoning(value: &str) -> Reasoning {
 // Helpers
 // ---------------------------------------------------------------------------
 
-fn split_url(url: &str) -> (&str, Option<&str>) {
-    match url.split_once('?') {
-        Some((path, query)) => (path, Some(query)),
-        None => (url, None),
-    }
-}
-
 fn requested_scope(query_string: Option<&str>, state: &Arc<ServerState>) -> std::result::Result<String, String> {
     match query_param(query_string, "scope") {
         Some(value) => paths::normalize_scope(&value).map_err(|error| error.to_string()),
@@ -413,95 +410,9 @@ fn missing_graph_message(scope: &str) -> String {
     }
 }
 
-fn read_body(request: &mut Request) -> std::result::Result<String, String> {
-    let mut body = String::new();
-    request
-        .as_reader()
-        .take(MAX_BODY_BYTES)
-        .read_to_string(&mut body)
-        .map_err(|error| format!("could not read the request body: {error}"))?;
-    Ok(body)
-}
-
-fn query_param(query_string: Option<&str>, key: &str) -> Option<String> {
-    let query_string = query_string?;
-    for pair in query_string.split('&') {
-        let (name, value) = pair.split_once('=').unwrap_or((pair, ""));
-        if name == key {
-            return Some(percent_decode(value));
-        }
-    }
-    None
-}
-
-fn percent_decode(raw: &str) -> String {
-    let bytes = raw.as_bytes();
-    let mut out = Vec::with_capacity(bytes.len());
-    let mut index = 0;
-    while index < bytes.len() {
-        match bytes[index] {
-            b'%' if index + 2 < bytes.len() => {
-                if let (Some(high), Some(low)) = (hex_value(bytes[index + 1]), hex_value(bytes[index + 2])) {
-                    out.push(high * 16 + low);
-                    index += 3;
-                    continue;
-                }
-                out.push(b'%');
-                index += 1;
-            }
-            b'+' => {
-                out.push(b' ');
-                index += 1;
-            }
-            byte => {
-                out.push(byte);
-                index += 1;
-            }
-        }
-    }
-    String::from_utf8_lossy(&out).into_owned()
-}
-
-fn hex_value(byte: u8) -> Option<u8> {
-    match byte {
-        b'0'..=b'9' => Some(byte - b'0'),
-        b'a'..=b'f' => Some(byte - b'a' + 10),
-        b'A'..=b'F' => Some(byte - b'A' + 10),
-        _ => None,
-    }
-}
-
-fn header(name: &str, value: &str) -> Header {
-    Header::from_bytes(name.as_bytes(), value.as_bytes()).expect("static header is valid")
-}
-
-fn json_response(status: u16, value: &Value) -> ResponseBox {
-    Response::from_string(value.to_string())
-        .with_status_code(StatusCode(status))
-        .with_header(header("Content-Type", "application/json; charset=utf-8"))
-        .with_header(header("Cache-Control", "no-store"))
-        .boxed()
-}
-
-fn error_response(status: u16, message: &str) -> ResponseBox {
-    json_response(status, &json!({ "error": message }))
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn query_params_are_decoded() {
-        let query = "scope=papers%2Fml&path=Book%2Fassets%2Ff%20x.png&flag";
-        assert_eq!(query_param(Some(query), "scope").unwrap(), "papers/ml");
-        assert_eq!(
-            query_param(Some(query), "path").unwrap(),
-            "Book/assets/f x.png"
-        );
-        assert_eq!(query_param(Some(query), "flag").unwrap(), "");
-        assert!(query_param(Some(query), "missing").is_none());
-    }
 
     #[test]
     fn reasoning_strings_map_to_the_shared_enum() {
@@ -512,11 +423,5 @@ mod tests {
             parse_reasoning("high"),
             Reasoning::Level(level) if level == "high"
         ));
-    }
-
-    #[test]
-    fn urls_split_cleanly() {
-        assert_eq!(split_url("/api/graph?scope="), ("/api/graph", Some("scope=")));
-        assert_eq!(split_url("/"), ("/", None));
     }
 }

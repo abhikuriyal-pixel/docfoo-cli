@@ -1,30 +1,20 @@
-//! Embedded frontend bundle and resource-file serving.
+//! Embedded KG-visualizer bundle.
 //!
-//! Every page asset is compiled into the binary with `include_str!` /
-//! `include_bytes!`, so `docfoo kg --vis` needs no installation step and no
-//! Node/TypeScript toolchain. The JS is plain ES modules shared between the
-//! browser and the Node test suite (see `crates/docfoo-cli/tests/js/`).
+//! Every page asset is compiled into the binary with `include_str!`, so
+//! `docfoo kg --vis` needs no installation step and no Node/TypeScript
+//! toolchain. The JS is plain ES modules shared between the browser and the
+//! Node test suite (see `crates/docfoo-cli/tests/js/`).
 //!
-//! KaTeX (MIT, `assets/katex/LICENSE`) is vendored from the desktop app's
-//! `node_modules` so math answers render with the same engine and fonts:
-//! `katex.min.js`, `katex.min.css` and the 20 `.woff2` faces it needs.
-
-use std::path::{Component, Path, PathBuf};
+//! Page-specific files live here; anything shared with the resource browser
+//! (theme base CSS, markdown renderer, theme picker, KaTeX) is delegated to
+//! [`crate::web::assets`].
 
 use tiny_http::{Header, Response, ResponseBox, StatusCode};
-
-use crate::workspace::Workspace;
 
 struct TextAsset {
     path: &'static str,
     mime: &'static str,
     body: &'static str,
-}
-
-struct BinaryAsset {
-    path: &'static str,
-    mime: &'static str,
-    body: &'static [u8],
 }
 
 static TEXT_ASSETS: &[TextAsset] = &[
@@ -64,141 +54,18 @@ static TEXT_ASSETS: &[TextAsset] = &[
         body: include_str!("assets/js/renderer.js"),
     },
     TextAsset {
-        path: "js/markdown.js",
-        mime: "text/javascript; charset=utf-8",
-        body: include_str!("assets/js/markdown.js"),
-    },
-    TextAsset {
         path: "js/models.js",
         mime: "text/javascript; charset=utf-8",
         body: include_str!("assets/js/models.js"),
-    },
-    TextAsset {
-        path: "js/theme.js",
-        mime: "text/javascript; charset=utf-8",
-        body: include_str!("assets/js/theme.js"),
     },
     TextAsset {
         path: "js/app.js",
         mime: "text/javascript; charset=utf-8",
         body: include_str!("assets/js/app.js"),
     },
-    TextAsset {
-        path: "katex/katex.min.js",
-        mime: "text/javascript; charset=utf-8",
-        body: include_str!("assets/katex/katex.min.js"),
-    },
-    TextAsset {
-        path: "katex/katex.min.css",
-        mime: "text/css; charset=utf-8",
-        body: include_str!("assets/katex/katex.min.css"),
-    },
 ];
 
-static BINARY_ASSETS: &[BinaryAsset] = &[
-    BinaryAsset {
-        path: "katex/fonts/KaTeX_AMS-Regular.woff2",
-        mime: "font/woff2",
-        body: include_bytes!("assets/katex/fonts/KaTeX_AMS-Regular.woff2"),
-    },
-    BinaryAsset {
-        path: "katex/fonts/KaTeX_Caligraphic-Bold.woff2",
-        mime: "font/woff2",
-        body: include_bytes!("assets/katex/fonts/KaTeX_Caligraphic-Bold.woff2"),
-    },
-    BinaryAsset {
-        path: "katex/fonts/KaTeX_Caligraphic-Regular.woff2",
-        mime: "font/woff2",
-        body: include_bytes!("assets/katex/fonts/KaTeX_Caligraphic-Regular.woff2"),
-    },
-    BinaryAsset {
-        path: "katex/fonts/KaTeX_Fraktur-Bold.woff2",
-        mime: "font/woff2",
-        body: include_bytes!("assets/katex/fonts/KaTeX_Fraktur-Bold.woff2"),
-    },
-    BinaryAsset {
-        path: "katex/fonts/KaTeX_Fraktur-Regular.woff2",
-        mime: "font/woff2",
-        body: include_bytes!("assets/katex/fonts/KaTeX_Fraktur-Regular.woff2"),
-    },
-    BinaryAsset {
-        path: "katex/fonts/KaTeX_Main-Bold.woff2",
-        mime: "font/woff2",
-        body: include_bytes!("assets/katex/fonts/KaTeX_Main-Bold.woff2"),
-    },
-    BinaryAsset {
-        path: "katex/fonts/KaTeX_Main-BoldItalic.woff2",
-        mime: "font/woff2",
-        body: include_bytes!("assets/katex/fonts/KaTeX_Main-BoldItalic.woff2"),
-    },
-    BinaryAsset {
-        path: "katex/fonts/KaTeX_Main-Italic.woff2",
-        mime: "font/woff2",
-        body: include_bytes!("assets/katex/fonts/KaTeX_Main-Italic.woff2"),
-    },
-    BinaryAsset {
-        path: "katex/fonts/KaTeX_Main-Regular.woff2",
-        mime: "font/woff2",
-        body: include_bytes!("assets/katex/fonts/KaTeX_Main-Regular.woff2"),
-    },
-    BinaryAsset {
-        path: "katex/fonts/KaTeX_Math-BoldItalic.woff2",
-        mime: "font/woff2",
-        body: include_bytes!("assets/katex/fonts/KaTeX_Math-BoldItalic.woff2"),
-    },
-    BinaryAsset {
-        path: "katex/fonts/KaTeX_Math-Italic.woff2",
-        mime: "font/woff2",
-        body: include_bytes!("assets/katex/fonts/KaTeX_Math-Italic.woff2"),
-    },
-    BinaryAsset {
-        path: "katex/fonts/KaTeX_SansSerif-Bold.woff2",
-        mime: "font/woff2",
-        body: include_bytes!("assets/katex/fonts/KaTeX_SansSerif-Bold.woff2"),
-    },
-    BinaryAsset {
-        path: "katex/fonts/KaTeX_SansSerif-Italic.woff2",
-        mime: "font/woff2",
-        body: include_bytes!("assets/katex/fonts/KaTeX_SansSerif-Italic.woff2"),
-    },
-    BinaryAsset {
-        path: "katex/fonts/KaTeX_SansSerif-Regular.woff2",
-        mime: "font/woff2",
-        body: include_bytes!("assets/katex/fonts/KaTeX_SansSerif-Regular.woff2"),
-    },
-    BinaryAsset {
-        path: "katex/fonts/KaTeX_Script-Regular.woff2",
-        mime: "font/woff2",
-        body: include_bytes!("assets/katex/fonts/KaTeX_Script-Regular.woff2"),
-    },
-    BinaryAsset {
-        path: "katex/fonts/KaTeX_Size1-Regular.woff2",
-        mime: "font/woff2",
-        body: include_bytes!("assets/katex/fonts/KaTeX_Size1-Regular.woff2"),
-    },
-    BinaryAsset {
-        path: "katex/fonts/KaTeX_Size2-Regular.woff2",
-        mime: "font/woff2",
-        body: include_bytes!("assets/katex/fonts/KaTeX_Size2-Regular.woff2"),
-    },
-    BinaryAsset {
-        path: "katex/fonts/KaTeX_Size3-Regular.woff2",
-        mime: "font/woff2",
-        body: include_bytes!("assets/katex/fonts/KaTeX_Size3-Regular.woff2"),
-    },
-    BinaryAsset {
-        path: "katex/fonts/KaTeX_Size4-Regular.woff2",
-        mime: "font/woff2",
-        body: include_bytes!("assets/katex/fonts/KaTeX_Size4-Regular.woff2"),
-    },
-    BinaryAsset {
-        path: "katex/fonts/KaTeX_Typewriter-Regular.woff2",
-        mime: "font/woff2",
-        body: include_bytes!("assets/katex/fonts/KaTeX_Typewriter-Regular.woff2"),
-    },
-];
-
-/// Serve one embedded asset (text or font), or 404.
+/// Serve one embedded KG asset, or a shared asset, or 404.
 pub fn serve(path: &str) -> ResponseBox {
     if let Some(asset) = TEXT_ASSETS.iter().find(|asset| asset.path == path) {
         return Response::from_string(asset.body)
@@ -207,62 +74,7 @@ pub fn serve(path: &str) -> ResponseBox {
             .with_header(header("Cache-Control", "no-cache"))
             .boxed();
     }
-    if let Some(asset) = BINARY_ASSETS.iter().find(|asset| asset.path == path) {
-        return Response::from_data(asset.body)
-            .with_status_code(StatusCode(200))
-            .with_header(header("Content-Type", asset.mime))
-            .with_header(header("Cache-Control", "no-cache"))
-            .boxed();
-    }
-    Response::from_string("{\"error\":\"asset not found\"}")
-        .with_status_code(StatusCode(404))
-        .with_header(header("Content-Type", "application/json; charset=utf-8"))
-        .boxed()
-}
-
-/// Resolve `rel` inside `<workspace>/resources`, refusing anything that
-/// escapes the library (absolute paths, drive prefixes, `..`, symlink
-/// escapes). Returns the canonicalized path and its content type.
-pub fn resolve_resource(workspace: &Workspace, rel: &str) -> Option<(PathBuf, &'static str)> {
-    if rel.trim().is_empty() {
-        return None;
-    }
-    let normalized = rel.replace('\\', "/");
-    let relative = Path::new(&normalized);
-    if relative.is_absolute()
-        || normalized.contains(':')
-        || !relative
-            .components()
-            .all(|component| matches!(component, Component::Normal(_)))
-    {
-        return None;
-    }
-
-    let resources = workspace.resources_dir().canonicalize().ok()?;
-    let candidate = resources.join(relative).canonicalize().ok()?;
-    if !candidate.starts_with(&resources) || !candidate.is_file() {
-        return None;
-    }
-    let mime = mime_for(&candidate);
-    Some((candidate, mime))
-}
-
-fn mime_for(path: &Path) -> &'static str {
-    match path
-        .extension()
-        .and_then(|extension| extension.to_str())
-        .map(str::to_ascii_lowercase)
-        .as_deref()
-    {
-        Some("png") => "image/png",
-        Some("jpg") | Some("jpeg") => "image/jpeg",
-        Some("gif") => "image/gif",
-        Some("webp") => "image/webp",
-        Some("bmp") => "image/bmp",
-        Some("svg") => "image/svg+xml",
-        Some("pdf") => "application/pdf",
-        _ => "application/octet-stream",
-    }
+    crate::web::assets::serve(path)
 }
 
 fn header(name: &str, value: &str) -> Header {
@@ -273,46 +85,17 @@ fn header(name: &str, value: &str) -> Header {
 mod tests {
     use super::*;
 
-    fn workspace(root: &Path) -> Workspace {
-        Workspace {
-            root: root.to_path_buf(),
-            agent_dir: root.join(".agent"),
-            models_dir: root.join("models"),
-        }
-    }
-
     #[test]
-    fn embedded_bundle_and_katex_are_served() {
-        let response = serve("index.html");
-        assert_eq!(response.status_code().0, 200);
-        assert!(serve("nope.js").status_code().0 == 404);
+    fn embedded_bundle_and_shared_assets_are_served() {
+        assert_eq!(serve("index.html").status_code().0, 200);
+        assert_eq!(serve("app.css").status_code().0, 200);
+        assert_eq!(serve("nope.js").status_code().0, 404);
 
+        // Shared assets and KaTeX resolve through the delegation.
+        assert_eq!(serve("base.css").status_code().0, 200);
+        assert_eq!(serve("js/markdown.js").status_code().0, 200);
         let katex = serve("katex/katex.min.js");
         assert_eq!(katex.status_code().0, 200);
         assert!(katex.data_length().unwrap_or(0) > 100_000);
-
-        let font = serve("katex/fonts/KaTeX_Main-Regular.woff2");
-        assert_eq!(font.status_code().0, 200);
-        assert!(font.data_length().unwrap_or(0) > 0);
-    }
-
-    #[test]
-    fn resources_resolve_but_escapes_are_refused() {
-        let temp = tempfile::tempdir().unwrap();
-        let resources = temp.path().join("resources");
-        std::fs::create_dir_all(resources.join("Book/assets")).unwrap();
-        std::fs::write(resources.join("Book/assets/f.png"), b"png").unwrap();
-        std::fs::write(temp.path().join("secret.txt"), b"nope").unwrap();
-        let workspace = workspace(temp.path());
-
-        let (path, mime) = resolve_resource(&workspace, "Book/assets/f.png").unwrap();
-        assert!(path.ends_with("f.png"));
-        assert_eq!(mime, "image/png");
-
-        assert!(resolve_resource(&workspace, "../secret.txt").is_none());
-        assert!(resolve_resource(&workspace, "/etc/passwd").is_none());
-        assert!(resolve_resource(&workspace, "Book/../../../secret.txt").is_none());
-        assert!(resolve_resource(&workspace, "").is_none());
-        assert!(resolve_resource(&workspace, "Book/missing.png").is_none());
     }
 }

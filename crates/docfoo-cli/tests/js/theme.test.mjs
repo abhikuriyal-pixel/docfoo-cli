@@ -6,7 +6,7 @@ import {
   readTheme,
   toggleTheme,
   writeTheme,
-} from '../../src/kg/vis/assets/js/theme.js';
+} from '../../src/web/assets/js/theme.js';
 
 test('art-deco is the launch default', () => {
   assert.equal(normalizeTheme(undefined), 'art-deco');

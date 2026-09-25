@@ -141,7 +141,7 @@ pub fn run(workspace: &Workspace, args: &KgArgs, scope: &str) -> Result<()> {
     eprintln!("DocFoo KG visualizer → {url}");
     eprintln!("Ctrl-C stops the server.");
     if !args.no_open {
-        open_browser(&url);
+        crate::web::open_browser(&url);
     }
 
     // Ctrl-C cancels the running query (if any) and stops the server. This is
@@ -171,46 +171,4 @@ fn resolve_default_model(workspace: &Workspace, cli_model: Option<&str>) -> Opti
         .flatten()
         .or_else(|| prefs.get("chat").ok().flatten())
         .map(str::to_string)
-}
-
-/// Best-effort browser launch; the URL is always printed as a fallback.
-fn open_browser(url: &str) {
-    #[cfg(target_os = "windows")]
-    let mut command = {
-        let mut command = std::process::Command::new("rundll32");
-        command.args(["url.dll,FileProtocolHandler", url]);
-        command
-    };
-    #[cfg(target_os = "macos")]
-    let mut command = {
-        let mut command = std::process::Command::new("open");
-        command.arg(url);
-        command
-    };
-    #[cfg(not(any(target_os = "windows", target_os = "macos")))]
-    let mut command = {
-        let mut command = std::process::Command::new("xdg-open");
-        command.arg(url);
-        command
-    };
-
-    let spawned = command
-        .stdin(std::process::Stdio::null())
-        .stdout(std::process::Stdio::null())
-        .stderr(std::process::Stdio::null())
-        .spawn()
-        .is_ok();
-
-    #[cfg(not(any(target_os = "windows", target_os = "macos")))]
-    if !spawned {
-        let _ = std::process::Command::new("wslview")
-            .arg(url)
-            .stdin(std::process::Stdio::null())
-            .stdout(std::process::Stdio::null())
-            .stderr(std::process::Stdio::null())
-            .spawn();
-    }
-
-    #[cfg(any(target_os = "windows", target_os = "macos"))]
-    let _ = spawned;
 }

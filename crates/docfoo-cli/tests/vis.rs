@@ -191,6 +191,36 @@ fn poll_until_done(base: &str) -> Vec<Value> {
 }
 
 #[test]
+fn vis_serves_the_page_and_shared_assets() {
+    let temp = tempfile::tempdir().unwrap();
+    write_fixture_workspace(temp.path());
+    let vis = start_vis(temp.path(), "");
+
+    // The page, its stylesheet, the shared theme base and the shared modules
+    // must all resolve — a 404 on /base.css silently strips every theme token.
+    for path in [
+        "/",
+        "/app.css",
+        "/base.css",
+        "/js/app.js",
+        "/js/markdown.js",
+        "/js/theme.js",
+        "/katex/katex.min.js",
+    ] {
+        let response = agent().get(format!("{}{path}", vis.base)).call().expect("GET");
+        assert_eq!(response.status().as_u16(), 200, "{path}");
+    }
+    let page = agent()
+        .get(format!("{}/", vis.base))
+        .call()
+        .unwrap()
+        .into_body()
+        .read_to_string()
+        .unwrap();
+    assert!(page.contains("DocFoo"), "page: {page}");
+}
+
+#[test]
 fn vis_serves_state_graph_and_assets() {
     let temp = tempfile::tempdir().unwrap();
     write_fixture_workspace(temp.path());

@@ -1,0 +1,148 @@
+/* ══════════════════════════════════════════════════════════════════════════
+   DocFoo shared web base — Google fonts, reset, kinetic/art-deco theme
+   tokens, body chrome, motif layers and scrollbars. Shared by both local
+   browsers (`kg --vis`, `resources --vis`) so the two stay token-for-token
+   identical. Page-specific styles live in each page's own app.css.
+   ══════════════════════════════════════════════════════════════════════ */
+
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Space+Grotesk:wght@400;500;600;700&family=Marcellus&family=Josefin+Sans:wght@300;400;500;600;700&display=swap');
+
+/* ── Reset ─────────────────────────────────────────────────────────────── */
+
+*, *::before, *::after { box-sizing: border-box; }
+html, body { height: 100%; }
+body { margin: 0; overflow: hidden; }
+button, input, select, textarea { font: inherit; color: inherit; }
+code, pre { font-family: var(--font-mono); }
+[hidden] { display: none !important; }
+
+/* ── Themes ────────────────────────────────────────────────────────────── */
+
+:root {
+  /* Kinetic Typography — token-for-token the desktop theme. */
+  --background: #0D0D0F;
+  --foreground: #E8E8E0;
+  --card: #161618;
+  --card-foreground: #E8E8E0;
+  --popover: #1E1E20;
+  --popover-foreground: #E8E8E0;
+  --primary: #4F6A36;
+  --primary-foreground: #E8E8E0;
+  --secondary: #27272A;
+  --secondary-foreground: #FAFAFA;
+  --muted: #18181B;
+  --muted-foreground: #A1A1AA;
+  --accent: #DFE104;
+  --accent-foreground: #000000;
+  --destructive: #8B3A3A;
+  --destructive-foreground: #FAFAFA;
+  --border: #3F3F46;
+  --input: #18181B;
+  --ring: #DFE104;
+  --success: #4A8A50;
+  --danger: #E5484D;
+  --warning: #DFE104;
+  --warning-foreground: #000000;
+  --mask-metal: #7FB069;
+  --code-bg: #18181B;
+  --radius: 0px;
+
+  --font-sans: 'Space Grotesk', system-ui, sans-serif;
+  --font-display: 'Space Grotesk', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+
+  --kg-viz-seed: #DFE104;
+  --kg-viz-hop: #FF5A1F;
+  /* Evidence UI chrome follows the theme primary (green); the canvas paints
+     seeds/hops only, so no ultraviolet remains anywhere in the page. */
+  --kg-viz-evidence: var(--primary);
+  --kg-viz-retry: #E5484D;
+  --kg-viz-node: #9C9CA6;
+  --kg-viz-edge: rgba(232, 232, 224, 0.14);
+}
+
+body[data-theme="art-deco"] {
+  /* Art Deco — The Gatsby Aesthetic; token-for-token the desktop theme. */
+  --background: #0A0A0A;
+  --foreground: #F2F0E4;
+  --card: #141414;
+  --card-foreground: #F2F0E4;
+  --popover: #1A1A1A;
+  --popover-foreground: #F2F0E4;
+  --primary: #6E6233;
+  --primary-foreground: #FFFFFF;
+  --secondary: #1E3D59;
+  --secondary-foreground: #F2F0E4;
+  --muted: #1A1A1A;
+  --muted-foreground: #888888;
+  --accent: #8A7A40;
+  --accent-foreground: #0A0A0A;
+  --destructive: #8B2020;
+  --destructive-foreground: #F2F0E4;
+  --border: #8A7A40;
+  --input: #141414;
+  --ring: #8A7A40;
+  --success: #8A7A40;
+  --success-foreground: #FFFFFF;
+  --danger: #D4554A;
+  --warning: #B8860B;
+  --warning-foreground: #F2F0E4;
+  --mask-metal: #C9A227;
+  --code-bg: #1A1A1A;
+  --radius: 0px;
+
+  --font-sans: 'Josefin Sans', system-ui, sans-serif;
+  --font-display: 'Marcellus', serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+
+  --kg-viz-seed: #E7C05C;
+  --kg-viz-hop: #CD7B47;
+  --kg-viz-evidence: var(--primary);
+  --kg-viz-retry: #D4554A;
+  --kg-viz-node: #8D8B7E;
+  --kg-viz-edge: rgba(138, 122, 64, 0.28);
+}
+
+body {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  color: var(--foreground);
+  background: var(--background);
+  font-family: var(--font-sans);
+  font-size: 14px;
+}
+
+/* Art Deco's diagonal crosshatch signature layer. */
+body[data-theme="art-deco"]::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-image:
+    repeating-linear-gradient(45deg, transparent, transparent 40px, rgba(212, 175, 55, 0.03) 40px, rgba(212, 175, 55, 0.03) 41px),
+    repeating-linear-gradient(-45deg, transparent, transparent 40px, rgba(212, 175, 55, 0.03) 40px, rgba(212, 175, 55, 0.03) 41px);
+}
+
+/* Kinetic's fine noise texture, exactly as the desktop overlay. */
+body[data-theme="kinetic"]::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  pointer-events: none;
+  opacity: 0.03;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-repeat: repeat;
+  background-size: 200px 200px;
+}
+
+/* Theme scrollbars (desktop parity). */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: transparent; }
+body[data-theme="kinetic"] ::-webkit-scrollbar-thumb { background: #3F3F46; border-radius: 5px; }
+body[data-theme="kinetic"] ::-webkit-scrollbar-thumb:hover { background: #A1A1AA; }
+body[data-theme="art-deco"] ::-webkit-scrollbar-thumb { background: rgba(212, 175, 55, 0.3); }
+body[data-theme="art-deco"] ::-webkit-scrollbar-thumb:hover { background: rgba(212, 175, 55, 0.5); }
