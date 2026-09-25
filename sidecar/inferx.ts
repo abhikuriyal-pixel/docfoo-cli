@@ -91,7 +91,7 @@ function modelConfig(entry: InferxModel): ProviderModelConfig | null {
 async function fetchLive(
   credential: RefreshCredential | undefined,
   signal: AbortSignal,
-): Promise<ProviderModelConfig[] | null> {
+): Promise<InferxModel[] | null> {
   const key = credential?.key;
   if (!key) return null;
   const response = await fetch(`${BASE_URL}/models`, {
@@ -102,14 +102,15 @@ async function fetchLive(
   const payload = (await response.json()) as { data?: unknown };
   if (!Array.isArray(payload.data)) return null;
   const seen = new Set<string>();
-  const configs: ProviderModelConfig[] = [];
+  const entries: InferxModel[] = [];
   for (const entry of payload.data) {
-    const config = modelConfig(entry as InferxModel);
-    if (!config || seen.has(config.id)) continue;
-    seen.add(config.id);
-    configs.push(config);
+    const row = entry as InferxModel;
+    const id = typeof row?.id === "string" ? row.id : "";
+    if (!id || seen.has(id)) continue;
+    seen.add(id);
+    entries.push(row);
   }
-  return configs.length > 0 ? configs : null;
+  return entries.length > 0 ? entries : null;
 }
 
 export function registerInferxProvider(runtime: ModelRuntime): void {
@@ -119,6 +120,6 @@ export function registerInferxProvider(runtime: ModelRuntime): void {
     api: API,
     apiKey: "$INFERX_API_KEY",
     models: [],
-    refreshModels: createCatalogRefresh({ fetchLive }),
+    refreshModels: createCatalogRefresh({ fetchLive, toConfig: modelConfig }),
   });
 }

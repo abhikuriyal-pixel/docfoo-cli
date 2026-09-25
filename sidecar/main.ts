@@ -131,6 +131,17 @@ async function main(): Promise<void> {
     }
   }
 
+  // A query can arrive before any models listing; make sure an empty catalog
+  // is discovered first (network only when the cache is missing or stale).
+  async function ensureBundledCatalogs(): Promise<void> {
+    const providers = runtime.getProviders();
+    const needsDiscovery = registeredProviderIds.some((providerId) => {
+      const provider = providers.find((candidate) => candidate.id === providerId);
+      return provider !== undefined && provider.getModels().length === 0;
+    });
+    if (needsDiscovery) await discoverBundledCatalogs();
+  }
+
   const complete = new CompleteService(runtime, emit);
   const providers = new ProviderService(runtime, emit);
 
@@ -139,6 +150,7 @@ async function main(): Promise<void> {
     try {
       switch (request.type) {
         case "complete":
+          await ensureBundledCatalogs();
           await complete.handle(request);
           break;
         case "cancel":
@@ -220,7 +232,7 @@ async function main(): Promise<void> {
   }
 
   fallbackTarget = process.stdout;
-  emit({ type: "ready", version: "0.1.3" });
+  emit({ type: "ready", version: "0.1.4" });
 
   const lines = createInterface({ input: process.stdin, terminal: false });
   lines.on("line", (line) => dispatch(null, line));
