@@ -8,7 +8,7 @@
 //!
 //! The module splits into four pieces:
 //! - [`hub`]: the in-memory event log behind the SSE stream;
-//! - [`projection`]: `graph.json` → the compact canvas projection;
+//! - [`projection`]: `graph.sqlite` → the compact canvas projection;
 //! - [`server`]: HTTP routing, the query worker and static/asset file serving;
 //! - [`assets`]: the embedded frontend bundle.
 

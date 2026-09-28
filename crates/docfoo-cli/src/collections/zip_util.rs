@@ -7,6 +7,7 @@ use std::path::Path;
 
 use serde_json::Value;
 
+use crate::kg::paths;
 use crate::util::{sanitize_component, Quota, QuotaError, QuotaState};
 
 /// Zip-bomb guards for shared collections (gallery items are small folders).
@@ -197,7 +198,13 @@ pub fn extract(
                 {
                     return Err(quota_error(kind));
                 }
-                if entry.is_dir() || !collection_entry_is_safe(name) || name != "graph.json" {
+                if name == "graph.json" {
+                    return Err(
+                        "This collection holds the old JSON graph format — ask the author to rebuild and share it with a current DocFoo."
+                            .to_string(),
+                    );
+                }
+                if entry.is_dir() || !collection_entry_is_safe(name) || name != "graph.sqlite" {
                     return Err("Unexpected file in collection zip.".to_string());
                 }
                 graph_count += 1;
@@ -214,15 +221,17 @@ pub fn extract(
             fs::create_dir_all(&target)
                 .map_err(|e| format!("could not create the graph folder: {e}"))?;
             let output = target.join(if rel.is_empty() {
-                "top-level.json"
+                "top-level.sqlite"
             } else {
-                "graph.json"
+                "graph.sqlite"
             });
+            // Never leave a stale WAL/journal next to the freshly installed file.
+            paths::remove_store_files(&output);
             for index in 0..archive.len() {
                 let mut entry = archive
                     .by_index(index)
                     .map_err(|_| "Unexpected file in collection zip.".to_string())?;
-                if entry.name() == "graph.json" {
+                if entry.name() == "graph.sqlite" {
                     let mut out = File::create(&output)
                         .map_err(|e| format!("could not write {}: {e}", output.display()))?;
                     std::io::copy(&mut entry, &mut out)
@@ -315,13 +324,32 @@ mod tests {
                     "manifest.json",
                     br#"{"app":"docfoo","kind":"kg","name":"Paper graph","rel":"papers/ml"}"#,
                 ),
-                ("graph.json", b"{}"),
+                ("graph.sqlite", b"SQLite format 3\0"),
             ],
         );
         let workspace = temp.path().join("ws");
         let name = extract(&zip_path, &workspace, "kg", false, None).unwrap();
         assert_eq!(name, "papers/ml");
-        assert!(workspace.join("graphs/papers/ml/graph.json").is_file());
+        assert!(workspace.join("graphs/papers/ml/graph.sqlite").is_file());
+    }
+
+    #[test]
+    fn rejects_the_retired_json_graph_format() {
+        let temp = tempfile::tempdir().unwrap();
+        let zip_path = temp.path().join("item.zip");
+        write_zip(
+            &zip_path,
+            &[
+                (
+                    "manifest.json",
+                    br#"{"app":"docfoo","kind":"kg","name":"Old graph","rel":""}"#,
+                ),
+                ("graph.json", b"{}"),
+            ],
+        );
+        let workspace = temp.path().join("ws");
+        let error = extract(&zip_path, &workspace, "kg", false, None).unwrap_err();
+        assert!(error.contains("old JSON graph format"), "error: {error}");
     }
 
     #[test]

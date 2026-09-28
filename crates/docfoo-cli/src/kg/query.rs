@@ -4,9 +4,9 @@ use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
 
 use docfoo_kg::decision::DecisionClient;
-use docfoo_kg::graph::KnowledgeGraph;
 use docfoo_kg::llm::{ChatClient, Reasoning};
 use docfoo_kg::query::{self, QueryError, StageEvent, Trace};
+use docfoo_kg::store::{KgStore, OpenMode};
 use serde_json::{json, Value};
 
 use crate::error::{CliError, Result};
@@ -54,9 +54,21 @@ pub fn run_query(
 
     let settings = settings::load_settings(workspace);
     let tunables = settings.query;
-    let mut kg = KnowledgeGraph::load(&graph_path)
-        .map_err(|error| CliError::Message(format!("could not load the knowledge graph: {error}")))?;
-    qualify_source_docs(&mut kg, scope);
+    // Section provenance is stored relative to the graph root; the store
+    // re-qualifies it to a workspace-relative path on read, which is what the
+    // citation/evidence layer downstream expects.
+    let store = KgStore::open(&graph_path, OpenMode::ReadOnly)
+        .map_err(|error| CliError::Message(format!("could not open the knowledge graph: {error}")))?
+        .with_source_prefix(scope);
+    if !store
+        .derived_ready()
+        .map_err(|error| CliError::Message(format!("could not read the knowledge graph: {error}")))?
+    {
+        return Err(CliError::Message(
+            "The knowledge graph is still being built — finish indexing before asking questions."
+                .to_string(),
+        ));
+    }
 
     // Jev concept routing is best-effort: when disabled or without a key the
     // query proceeds with lexical seeds and the gate's fallback.
@@ -67,7 +79,7 @@ pub fn run_query(
 
     let outcome = query::retrieve(
         query_text,
-        &kg,
+        &store,
         &tunables,
         llm.as_ref(),
         decision.as_deref(),
@@ -78,6 +90,9 @@ pub fn run_query(
     .map_err(|error| match error {
         QueryError::Cancelled => CliError::Message("the query was cancelled".to_string()),
         QueryError::Llm(error) => CliError::Message(error.to_string()),
+        QueryError::Store(error) => {
+            CliError::Message(format!("could not read the knowledge graph: {error}"))
+        }
     })?;
 
     Ok(QueryReport {
@@ -133,20 +148,4 @@ pub fn result_data(
         "totalSecs": report.trace.total_seconds,
         "saved": saved,
     })
-}
-
-/// Subdirectory graphs store section provenance relative to the GRAPH root,
-/// while everything downstream expects workspace-relative rels. Re-qualify at
-/// query time; the stored graph file is left untouched and the operation is
-/// idempotent. Port of `src-tauri/src/kg/query.rs::qualify_source_docs`.
-pub fn qualify_source_docs(kg: &mut KnowledgeGraph, scope: &str) {
-    if scope.is_empty() {
-        return;
-    }
-    let prefix = format!("{scope}/");
-    for info in kg.sections.values_mut() {
-        if !info.source_doc.is_empty() && !info.source_doc.starts_with(&prefix) {
-            info.source_doc = format!("{prefix}{}", info.source_doc);
-        }
-    }
 }

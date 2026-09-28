@@ -1,18 +1,23 @@
 //! Graph projection for the visualizer — port of the desktop app's
 //! `src-tauri/src/kg/graph_data.rs`.
 //!
-//! `graph.json` is projected into a compact, frontend-friendly shape: nodes
-//! as `[id, name, type, degree]` tuples, edges as node-index pairs, sections
-//! as `{title: {t: topic, e: [node idx]}}`, the measured noise floor, and an
-//! fnv1a-64 hash of the raw file used as the layout/cache key. Results are
-//! cached per graph file keyed by that hash, so repeated fetches cost one
-//! disk read + parse only when the graph actually changed.
+//! The `graph.sqlite` store is hydrated into the in-memory model and projected
+//! into the frontend-friendly JSON shape: nodes as `[id, name, type, degree]`
+//! tuples, edges as node-index pairs, sections as
+//! `{title: {t: topic, e: [node idx]}}`, the measured noise floor, and the
+//! store's `build_uid` as the layout/cache key. Results are cached per graph
+//! file keyed by that uid, so repeated fetches cost one store open + hydrate
+//! only when the graph actually changed.
+//!
+//! (The packed binary scene transport lives in the full desktop app; the CLI
+//! viewer still consumes this JSON projection.)
 
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 
 use docfoo_kg::graph::KnowledgeGraph;
+use docfoo_kg::store::{KgStore, OpenMode};
 use serde_json::{json, Value};
 
 /// Description snippet ceiling for the tap-a-node popover (characters).
@@ -31,20 +36,9 @@ fn truncate_desc(desc: &str) -> String {
     }
 }
 
-/// fnv1a-64 over the raw file bytes — stable across reads of the same file,
-/// cheap, and distinct per content.
-pub fn fnv1a64(bytes: &[u8]) -> u64 {
-    let mut hash: u64 = 0xcbf2_9ce4_8422_2325;
-    for byte in bytes {
-        hash ^= *byte as u64;
-        hash = hash.wrapping_mul(0x0000_0100_0000_01b3);
-    }
-    hash
-}
-
 #[derive(Default)]
 pub struct Projector {
-    cache: Mutex<HashMap<PathBuf, (u64, Value)>>,
+    cache: Mutex<HashMap<PathBuf, (String, Value)>>,
 }
 
 impl Projector {
@@ -52,12 +46,14 @@ impl Projector {
         Self::default()
     }
 
-    /// Project `graph_path`, reusing the cached projection when the file's
-    /// content hash is unchanged.
+    /// Project `graph_path`, reusing the cached projection when the store's
+    /// build uid is unchanged.
     pub fn project(&self, graph_path: &Path) -> std::result::Result<Value, String> {
-        let bytes = std::fs::read(graph_path)
-            .map_err(|error| format!("could not read the graph file: {error}"))?;
-        let hash = fnv1a64(&bytes);
+        let store = KgStore::open(graph_path, OpenMode::ReadOnly)
+            .map_err(|error| format!("could not open the knowledge graph: {error}"))?;
+        let hash = store
+            .build_uid()
+            .map_err(|error| format!("could not read the knowledge graph: {error}"))?;
 
         if let Ok(cache) = self.cache.lock() {
             if let Some((cached_hash, cached)) = cache.get(graph_path) {
@@ -67,9 +63,11 @@ impl Projector {
             }
         }
 
-        let graph: KnowledgeGraph = serde_json::from_slice(&bytes)
-            .map_err(|error| format!("graph file parse failed: {error}"))?;
-        let projection = project_graph(&graph, hash);
+        let mut graph = KnowledgeGraph::default();
+        store
+            .load_into(&mut graph)
+            .map_err(|error| format!("could not read the knowledge graph: {error}"))?;
+        let projection = project_graph(&graph, &hash);
 
         if let Ok(mut cache) = self.cache.lock() {
             cache.insert(graph_path.to_path_buf(), (hash, projection.clone()));
@@ -78,7 +76,7 @@ impl Projector {
     }
 }
 
-fn project_graph(graph: &KnowledgeGraph, hash: u64) -> Value {
+fn project_graph(graph: &KnowledgeGraph, hash: &str) -> Value {
     // Node order = BTreeMap iteration (id-sorted, deterministic).
     let mut degree: HashMap<&str, usize> = HashMap::new();
     for relation in &graph.relations {
@@ -145,7 +143,7 @@ fn project_graph(graph: &KnowledgeGraph, hash: u64) -> Value {
         .into();
 
     json!({
-        "hash": format!("{hash:016x}"),
+        "hash": hash,
         "nodes": nodes,
         "edges": edges,
         "sections": sections,
@@ -157,61 +155,107 @@ fn project_graph(graph: &KnowledgeGraph, hash: u64) -> Value {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use docfoo_kg::graph::SectionInfo;
 
-    fn write_graph(dir: &Path, content: &str) -> PathBuf {
-        let path = dir.join("graph.json");
-        std::fs::write(&path, content).unwrap();
+    fn sample() -> KnowledgeGraph {
+        let mut kg = KnowledgeGraph::default();
+        kg.add_entity(
+            "DEVICE_a",
+            "A",
+            "DEVICE",
+            "x",
+            "[DOC] Apple facts",
+            Some("doc/content.md"),
+        );
+        kg.add_entity(
+            "CONCEPT_b",
+            "B",
+            "CONCEPT",
+            "y",
+            "[DOC] Apple facts",
+            Some("doc/content.md"),
+        );
+        kg.add_entity("CONCEPT_iso", "Iso", "CONCEPT", "z", "[DOC] Apple facts", None);
+        kg.add_relation(
+            "DEVICE_a",
+            "CONCEPT_b",
+            "USES",
+            "[DOC] Apple facts",
+            Some("doc/content.md"),
+        );
+        kg.add_relation(
+            "CONCEPT_b",
+            "DEVICE_a",
+            "ENABLES",
+            "[DOC] Apple facts",
+            Some("doc/content.md"),
+        );
+        kg.sections.insert(
+            "[DOC] Apple facts".into(),
+            SectionInfo {
+                topic: Some("[CO] Chapter 3".into()),
+                entity_ids: vec![
+                    "DEVICE_a".into(),
+                    "CONCEPT_b".into(),
+                    "GONE_missing".into(),
+                ],
+                text: "t".into(),
+                source_doc: "doc/content.md".into(),
+                ..Default::default()
+            },
+        );
+        kg.noise_floor = Some(0.031);
+        kg
+    }
+
+    fn write_store(dir: &Path) -> PathBuf {
+        let path = dir.join("graph.sqlite");
+        KgStore::write_full(&sample(), &path).unwrap();
         path
     }
 
-    #[test]
-    fn projection_matches_the_desktop_shape_and_counts() {
-        let dir = std::env::temp_dir().join(format!("docfoo-vis-proj-{}", std::process::id()));
+    fn temp_dir(tag: &str) -> PathBuf {
+        let dir = std::env::temp_dir().join(format!(
+            "docfoo-vis-proj-{tag}-{}-{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .map(|d| d.as_nanos())
+                .unwrap_or(0)
+        ));
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&dir).unwrap();
-        let path = write_graph(
-            &dir,
-            r#"{
-            "entities": {
-                "DEVICE_a": { "id": "DEVICE_a", "name": "A", "type": "DEVICE", "desc": "x", "sections": ["S1"], "source_doc": [] },
-                "CONCEPT_b": { "id": "CONCEPT_b", "name": "B", "type": "CONCEPT", "desc": "y", "sections": ["S1"], "source_doc": [] },
-                "CONCEPT_iso": { "id": "CONCEPT_iso", "name": "Iso", "type": "CONCEPT", "desc": "z", "sections": [], "source_doc": [] }
-            },
-            "relations": [
-                { "source": "DEVICE_a", "target": "CONCEPT_b", "rel": "USES", "section": "S1" },
-                { "source": "CONCEPT_b", "target": "DEVICE_a", "rel": "ENABLES", "section": "S1" },
-                { "source": "DEVICE_a", "target": "GONE_missing", "rel": "USES", "section": "S1" }
-            ],
-            "sections": {
-                "S1": { "topic": "[CO] Chapter 3", "entity_ids": ["DEVICE_a", "CONCEPT_b", "GONE_missing"], "text": "t", "source_doc": "d.md", "content_hash": "" }
-            },
-            "topics": {},
-            "noise_floor": 0.031
-        }"#,
-        );
+        dir
+    }
+
+    #[test]
+    fn projection_matches_the_frontend_shape_and_counts() {
+        let dir = temp_dir("shape");
+        let path = write_store(&dir);
+        let expected_uid = KgStore::open(&path, OpenMode::ReadOnly)
+            .unwrap()
+            .build_uid()
+            .unwrap();
 
         let projector = Projector::new();
         let projection = projector.project(&path).unwrap();
-        assert_eq!(
-            projection["hash"],
-            format!("{:016x}", fnv1a64(&std::fs::read(&path).unwrap()))
-        );
+        assert_eq!(projection["hash"], expected_uid);
         assert_eq!(
             projection["nodes"],
             json!([
                 ["CONCEPT_b", "B", "CONCEPT", 2],
                 ["CONCEPT_iso", "Iso", "CONCEPT", 0],
-                ["DEVICE_a", "A", "DEVICE", 3],
+                ["DEVICE_a", "A", "DEVICE", 2],
             ])
         );
         assert_eq!(projection["edges"], json!([[2, 0], [0, 2]]));
         assert_eq!(
-            projection["sections"]["S1"],
+            projection["sections"]["[DOC] Apple facts"],
             json!({ "t": "[CO] Chapter 3", "e": [2, 0] })
         );
         assert_eq!(projection["noiseFloor"], json!(0.031));
 
-        // The cache survives a changed file: same hash, same value.
+        // The cache survives a re-projection: same uid, same value.
         let again = projector.project(&path).unwrap();
         assert_eq!(again["hash"], projection["hash"]);
         assert_eq!(again["nodes"], projection["nodes"]);

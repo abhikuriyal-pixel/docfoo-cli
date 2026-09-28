@@ -81,7 +81,7 @@ Buddy, KG chat history browsing, community uploads, Koofr cloud backup, OAuth pr
 
 ```
 1. Resolve workspace (--workspace / DOCFOO_WORKSPACE / ~/.docfoo).
-2. Load kg-settings.json (IndexSettings/QueryTunables, clamped) and graphs/<scope>/graph.json.
+2. Load kg-settings.json (IndexSettings/QueryTunables, clamped) and graphs/<scope>/graph.sqlite.
 3. Spawn/reuse docfoo-agent (lazy; only if the command needs models).
 4. Build AgentChatClient (implements docfoo_kg::llm::ChatClient) over the sidecar.
 5. docfoo_kg::query::retrieve(query, &kg, &tunables, llm, decision, sink, cancel, on_delta)
@@ -107,7 +107,7 @@ Same shape as the app's `db/` so `--workspace` can point at the app's data:
 ~/.docfoo/                        # DOCFOO_WORKSPACE
 ├── resources/                    # read-only in v1
 │   └── <card>/{content.md, assets/}
-├── graphs/top-level.json         # + graphs/<scope>/graph.json
+├── graphs/top-level.sqlite       # + graphs/<scope>/graph.sqlite (SQLite store)
 ├── notes.json                    # read-only
 ├── notes-images/                 # read-only
 ├── model-selection.json          # CLI + app shared
@@ -184,7 +184,7 @@ markdown|slack|json`, `--quiet`, `--verbose`, `--no-color`.
 | Command | Flags | Notes |
 |---|---|---|
 | `docfoo kg --query Q` | `--scope DIR`, `--model KEY`, `--reasoning off\|minimal\|…\|max`, `--save`, `--stream`, `--hermes-final`, `--plain-tables`, `--no-sources`, `--quote-sources`, `--max-chars N` | One-shot final answer. Defaults: scope `""` (top-level graph), model `kgModelKey`. |
-| `docfoo kg --index` | `--scope DIR`, `--fresh`, `--model KEY`, `--reasoning LEVEL` | Writes `graphs/<scope>/graph.json`; progress on stderr. |
+| `docfoo kg --index` | `--scope DIR`, `--fresh`, `--model KEY`, `--reasoning LEVEL` | Writes `graphs/<scope>/graph.sqlite`; progress on stderr. |
 | `docfoo kg --status` | `--scope DIR` | Built graphs, active scope, doc/section counts, source staleness. |
 | `docfoo scan <file>` | `--parallel N` (4), `--text_model KEY`, `--figure_model KEY`, `--output DEST`, `--pages 1,2,3`, `--prompt TEXT`, `--analysis-prompt TEXT`, `--no-figures` | `--figure_model` defaults to `--text_model`; `--no-figures` disables analysis. |
 | `docfoo resources --list` | `--tree`, `--figures` | Default one level; `--tree` recursive. |
@@ -430,7 +430,7 @@ Reference: `crates/docfoo-kg/src/{build.rs,query/mod.rs,query/synthesis.rs}`,
 
 Tests:
 
-- Fixture workspace with 2 tiny resource cards + prebuilt `graphs/top-level.json`.
+- Fixture workspace with 2 tiny resource cards + prebuilt `graphs/top-level.sqlite`.
 - Fake sidecar returns canned synthesis with `[S1]` tags, a figure line, and a table.
 - Assert: answer expansion, citations (start/end), figure absolute paths, sources, JSON schema,
   Slack `MEDIA:` conversion, sentinel placement, `--save` round-trip.
@@ -478,7 +478,7 @@ Deliverables:
   `docfoo-backup` v1.
 - `collections/`: port `src-tauri/src/collections/client.rs` (list/info/download with the Koofr
   `Referer` handling), `zip_util.rs::extract`, and `api.rs::collections_download` install rules
-  (resource → `resources/<name>` with suffixing; KG → `graphs/<components>/graph.json`).
+  (resource → `resources/<name>` with suffixing; KG → `graphs/<components>/graph.sqlite`).
 - `commands/backup.rs`, `commands/restore.rs`, `commands/collections.rs`.
 - `--yes` confirmation for restore; `--force` for overwrite.
 

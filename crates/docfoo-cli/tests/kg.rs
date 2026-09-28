@@ -7,10 +7,45 @@
 use std::path::Path;
 use std::process::Command;
 
+use docfoo_kg::graph::{KnowledgeGraph, SectionInfo};
+use docfoo_kg::store::KgStore;
+
 fn docfoo_with_fake_sidecar() -> Command {
     let mut command = Command::new(env!("CARGO_BIN_EXE_docfoo"));
     command.env("DOCFOO_SIDECAR_BIN", env!("CARGO_BIN_EXE_fake-sidecar"));
     command
+}
+
+fn fixture_graph() -> KnowledgeGraph {
+    let mut graph = KnowledgeGraph::default();
+    graph.add_entity(
+        "CONCEPT_apple",
+        "Apple",
+        "CONCEPT",
+        "A tropical fruit.",
+        "[DOC] Apple facts",
+        Some("doc/content.md"),
+    );
+    graph.add_relation(
+        "CONCEPT_apple",
+        "CONCEPT_apple",
+        "PART_OF",
+        "[DOC] Apple facts",
+        Some("doc/content.md"),
+    );
+    graph.sections.insert(
+        "[DOC] Apple facts".into(),
+        SectionInfo {
+            topic: None,
+            entity_ids: vec!["CONCEPT_apple".into()],
+            text: "Apples are a tropical fruit. Mangoes are also tropical fruit.".into(),
+            source_doc: "doc/content.md".into(),
+            start_line: 1,
+            end_line: 2,
+            ..Default::default()
+        },
+    );
+    graph
 }
 
 fn write_fixture_workspace(root: &Path) {
@@ -20,48 +55,114 @@ fn write_fixture_workspace(root: &Path) {
         "Apples are a tropical fruit.\nMangoes are also tropical fruit.\n",
     )
     .unwrap();
-    std::fs::create_dir_all(root.join("graphs")).unwrap();
-    let graph = serde_json::json!({
-        "entities": {
-            "CONCEPT_apple": {
-                "id": "CONCEPT_apple",
-                "name": "Apple",
-                "type": "CONCEPT",
-                "desc": "A tropical fruit.",
-                "sections": ["[DOC] Apple facts"],
-                "source_doc": ["doc/content.md"]
-            }
-        },
-        "relations": [
-            {
-                "source": "CONCEPT_apple",
-                "target": "CONCEPT_apple",
-                "rel": "PART_OF",
-                "section": "[DOC] Apple facts",
-                "source_doc": "doc/content.md"
-            }
-        ],
-        "sections": {
-            "[DOC] Apple facts": {
-                "topic": null,
-                "entity_ids": ["CONCEPT_apple"],
-                "text": "Apples are a tropical fruit. Mangoes are also tropical fruit.",
-                "source_doc": "doc/content.md",
-                "start_line": 1,
-                "end_line": 2,
-                "content_hash": "",
-                "retry_pending": false
-            }
-        },
-        "topics": {},
-        "noise_floor": null,
-        "source_hashes": {}
-    });
+    let graph = fixture_graph();
+    std::fs::create_dir_all(root.join("graphs/papers/ml")).unwrap();
+    KgStore::write_full(&graph, &root.join("graphs/top-level.sqlite")).unwrap();
+    KgStore::write_full(&graph, &root.join("graphs/papers/ml/graph.sqlite")).unwrap();
+}
+
+#[test]
+fn kg_index_builds_a_sqlite_store_and_status_reports_it() {
+    let temp = tempfile::tempdir().unwrap();
+    std::fs::create_dir_all(temp.path().join("resources/doc")).unwrap();
     std::fs::write(
-        root.join("graphs/top-level.json"),
-        serde_json::to_string_pretty(&graph).unwrap(),
+        temp.path().join("resources/doc/content.md"),
+        "## Apple facts\n\nApples are a tropical fruit grown in orchards around the world.\n\n\
+         Mangoes are also tropical fruit, and both appear in many recipes that pair\n\n\
+         their sweetness with citrus and spice for balance. Orchards harvest apples\n\n\
+         in autumn, while mangoes ripen through the warm summer months.\n",
     )
     .unwrap();
+
+    let output = docfoo_with_fake_sidecar()
+        .args([
+            "kg",
+            "--index",
+            "--model",
+            "fake-provider/fake-model",
+            "--json",
+            "--workspace",
+        ])
+        .arg(temp.path())
+        .output()
+        .expect("run docfoo");
+    assert!(
+        output.status.success(),
+        "stderr: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let value: serde_json::Value =
+        serde_json::from_slice(&output.stdout).expect("json envelope");
+    assert_eq!(value["command"], "kg.index");
+    let graph_path = value["data"]["graphPath"].as_str().expect("graphPath");
+    assert!(
+        std::path::Path::new(graph_path).ends_with("graphs/top-level.sqlite"),
+        "graphPath: {graph_path}"
+    );
+    assert!(temp.path().join("graphs/top-level.sqlite").is_file());
+    assert!(
+        !temp.path().join("graphs/top-level.json").exists(),
+        "the retired JSON graph must not be written"
+    );
+
+    let output = docfoo_with_fake_sidecar()
+        .args(["kg", "--status", "--json", "--workspace"])
+        .arg(temp.path())
+        .output()
+        .expect("run docfoo");
+    assert!(
+        output.status.success(),
+        "stderr: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let value: serde_json::Value =
+        serde_json::from_slice(&output.stdout).expect("json envelope");
+    assert_eq!(value["command"], "kg.status");
+    assert_eq!(value["data"]["exists"], true);
+    assert!(value["data"]["graphPath"]
+        .as_str()
+        .map(|path| std::path::Path::new(path).ends_with("graphs/top-level.sqlite"))
+        .unwrap_or(false));
+    assert_eq!(value["data"]["built"], serde_json::json!([""]));
+}
+
+#[test]
+fn kg_query_qualifies_scoped_graph_sources() {
+    let temp = tempfile::tempdir().unwrap();
+    write_fixture_workspace(temp.path());
+    let output = docfoo_with_fake_sidecar()
+        .args([
+            "kg",
+            "--query",
+            "What are apples?",
+            "--scope",
+            "papers/ml",
+            "--model",
+            "fake-provider/fake-model",
+            "--json",
+            "--workspace",
+        ])
+        .arg(temp.path())
+        .output()
+        .expect("run docfoo");
+    assert!(
+        output.status.success(),
+        "stderr: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let value: serde_json::Value =
+        serde_json::from_slice(&output.stdout).expect("json envelope");
+    let data = &value["data"];
+
+    // The store holds provenance relative to the graph root; the query must
+    // surface it workspace-relative (papers/ml/…) for citations and sources.
+    let answer = data["answer_markdown"].as_str().unwrap();
+    assert!(
+        answer.contains("[papers/ml/doc/content.md:"),
+        "scoped citation was not qualified: {answer}"
+    );
+    let sources = data["sources"].as_array().unwrap();
+    assert_eq!(sources[0]["doc"], "papers/ml/doc/content.md");
 }
 
 #[test]

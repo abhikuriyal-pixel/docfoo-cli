@@ -8,8 +8,8 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 
 use docfoo_kg::build::Progress;
-use docfoo_kg::graph::KnowledgeGraph;
 use docfoo_kg::llm::Reasoning;
+use docfoo_kg::store::{KgStore, OpenMode};
 use serde_json::{json, Value};
 
 use crate::cli::{Cli, KgArgs};
@@ -126,9 +126,13 @@ fn run_status(format: OutputFormat, workspace: &Workspace, scope: &str) -> Resul
     let exists = graph_path.is_file();
     let built = paths::list_built(workspace);
     let (entities, relations, sections) = if exists {
-        let graph = KnowledgeGraph::load(&graph_path)
-            .map_err(|error| CliError::Message(format!("could not load the knowledge graph: {error}")))?;
-        (graph.entities.len(), graph.relations.len(), graph.sections.len())
+        let store = KgStore::open(&graph_path, OpenMode::ReadOnly).map_err(|error| {
+            CliError::Message(format!("could not open the knowledge graph: {error}"))
+        })?;
+        let counts = store.counts().map_err(|error| {
+            CliError::Message(format!("could not read the knowledge graph: {error}"))
+        })?;
+        (counts.entities, counts.relations, counts.sections)
     } else {
         (0, 0, 0)
     };

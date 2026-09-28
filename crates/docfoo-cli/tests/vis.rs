@@ -11,6 +11,49 @@ use std::time::{Duration, Instant};
 
 use serde_json::{json, Value};
 
+use docfoo_kg::graph::{KnowledgeGraph, SectionInfo};
+use docfoo_kg::store::KgStore;
+
+fn fixture_graph() -> KnowledgeGraph {
+    let mut graph = KnowledgeGraph::default();
+    graph.add_entity(
+        "CONCEPT_apple",
+        "Apple",
+        "CONCEPT",
+        "A tropical fruit.",
+        "[DOC] Apple facts",
+        Some("doc/content.md"),
+    );
+    graph.add_entity(
+        "CONCEPT_mango",
+        "Mango",
+        "CONCEPT",
+        "Another tropical fruit.",
+        "[DOC] Apple facts",
+        Some("doc/content.md"),
+    );
+    graph.add_relation(
+        "CONCEPT_apple",
+        "CONCEPT_mango",
+        "RELATED_TO",
+        "[DOC] Apple facts",
+        Some("doc/content.md"),
+    );
+    graph.sections.insert(
+        "[DOC] Apple facts".into(),
+        SectionInfo {
+            topic: None,
+            entity_ids: vec!["CONCEPT_apple".into(), "CONCEPT_mango".into()],
+            text: "Apples are a tropical fruit. Mangoes are also tropical fruit.".into(),
+            source_doc: "doc/content.md".into(),
+            start_line: 1,
+            end_line: 2,
+            ..Default::default()
+        },
+    );
+    graph
+}
+
 fn write_fixture_workspace(root: &Path) {
     std::fs::create_dir_all(root.join("resources/doc/assets")).unwrap();
     std::fs::write(
@@ -21,61 +64,10 @@ fn write_fixture_workspace(root: &Path) {
     std::fs::write(root.join("resources/doc/assets/f.png"), b"fake-png-bytes").unwrap();
     std::fs::write(root.join("secret.txt"), b"do not serve").unwrap();
 
+    let graph = fixture_graph();
     std::fs::create_dir_all(root.join("graphs/papers/ml")).unwrap();
-    let graph = json!({
-        "entities": {
-            "CONCEPT_apple": {
-                "id": "CONCEPT_apple",
-                "name": "Apple",
-                "type": "CONCEPT",
-                "desc": "A tropical fruit.",
-                "sections": ["[DOC] Apple facts"],
-                "source_doc": ["doc/content.md"]
-            },
-            "CONCEPT_mango": {
-                "id": "CONCEPT_mango",
-                "name": "Mango",
-                "type": "CONCEPT",
-                "desc": "Another tropical fruit.",
-                "sections": ["[DOC] Apple facts"],
-                "source_doc": ["doc/content.md"]
-            }
-        },
-        "relations": [
-            {
-                "source": "CONCEPT_apple",
-                "target": "CONCEPT_mango",
-                "rel": "RELATED_TO",
-                "section": "[DOC] Apple facts",
-                "source_doc": "doc/content.md"
-            }
-        ],
-        "sections": {
-            "[DOC] Apple facts": {
-                "topic": null,
-                "entity_ids": ["CONCEPT_apple", "CONCEPT_mango"],
-                "text": "Apples are a tropical fruit. Mangoes are also tropical fruit.",
-                "source_doc": "doc/content.md",
-                "start_line": 1,
-                "end_line": 2,
-                "content_hash": "",
-                "retry_pending": false
-            }
-        },
-        "topics": {},
-        "noise_floor": null,
-        "source_hashes": {}
-    });
-    std::fs::write(
-        root.join("graphs/top-level.json"),
-        serde_json::to_string_pretty(&graph).unwrap(),
-    )
-    .unwrap();
-    std::fs::write(
-        root.join("graphs/papers/ml/graph.json"),
-        serde_json::to_string_pretty(&graph).unwrap(),
-    )
-    .unwrap();
+    KgStore::write_full(&graph, &root.join("graphs/top-level.sqlite")).unwrap();
+    KgStore::write_full(&graph, &root.join("graphs/papers/ml/graph.sqlite")).unwrap();
 }
 
 struct VisProcess {

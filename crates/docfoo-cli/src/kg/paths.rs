@@ -1,7 +1,7 @@
 //! Graph path rules and scope validation.
 //!
-//! `""` (whole library) → `graphs/top-level.json`; `"papers/ml"` →
-//! `graphs/papers/ml/graph.json`. Port of `src-tauri/src/kg/mod.rs` path rules.
+//! `""` (whole library) → `graphs/top-level.sqlite`; `"papers/ml"` →
+//! `graphs/papers/ml/graph.sqlite`. Port of `src-tauri/src/kg/mod.rs` path rules.
 
 use std::path::{Path, PathBuf};
 
@@ -48,11 +48,22 @@ fn is_safe_rel(rel: &str) -> bool {
 pub fn graph_path(workspace: &Workspace, scope: &str) -> PathBuf {
     let graphs = workspace.graphs_dir();
     if scope.is_empty() {
-        graphs.join("top-level.json")
+        graphs.join("top-level.sqlite")
     } else {
         graphs
             .join(scope.replace('\\', "/"))
-            .join("graph.json")
+            .join("graph.sqlite")
+    }
+}
+
+/// Remove a store and any SQLite sidecars it may have left behind
+/// (`-wal`, `-shm`, `-journal`). Missing files are ignored.
+pub fn remove_store_files(graph_path: &Path) {
+    let _ = std::fs::remove_file(graph_path);
+    for suffix in ["-wal", "-shm", "-journal"] {
+        let mut sidecar = graph_path.as_os_str().to_os_string();
+        sidecar.push(suffix);
+        let _ = std::fs::remove_file(PathBuf::from(sidecar));
     }
 }
 
@@ -60,7 +71,7 @@ pub fn graph_path(workspace: &Workspace, scope: &str) -> PathBuf {
 pub fn list_built(workspace: &Workspace) -> Vec<String> {
     let mut built = Vec::new();
     let root = workspace.graphs_dir();
-    if root.join("top-level.json").is_file() {
+    if root.join("top-level.sqlite").is_file() {
         built.push(String::new());
     }
     fn walk(dir: &Path, prefix: &str, out: &mut Vec<String>) {
@@ -78,7 +89,7 @@ pub fn list_built(workspace: &Workspace) -> Vec<String> {
             } else {
                 format!("{prefix}/{name}")
             };
-            if path.join("graph.json").is_file() {
+            if path.join("graph.sqlite").is_file() {
                 out.push(rel.clone());
             }
             walk(&path, &rel, out);
@@ -121,11 +132,11 @@ mod tests {
         let workspace = workspace(temp.path());
         assert_eq!(
             graph_path(&workspace, ""),
-            temp.path().join("graphs").join("top-level.json")
+            temp.path().join("graphs").join("top-level.sqlite")
         );
         assert_eq!(
             graph_path(&workspace, "papers/ml"),
-            temp.path().join("graphs").join("papers/ml").join("graph.json")
+            temp.path().join("graphs").join("papers/ml").join("graph.sqlite")
         );
     }
 
@@ -134,8 +145,22 @@ mod tests {
         let temp = tempfile::tempdir().unwrap();
         let workspace = workspace(temp.path());
         std::fs::create_dir_all(temp.path().join("graphs/papers/ml")).unwrap();
-        std::fs::write(temp.path().join("graphs/top-level.json"), "{}").unwrap();
-        std::fs::write(temp.path().join("graphs/papers/ml/graph.json"), "{}").unwrap();
+        std::fs::write(temp.path().join("graphs/top-level.sqlite"), "").unwrap();
+        std::fs::write(temp.path().join("graphs/papers/ml/graph.sqlite"), "").unwrap();
         assert_eq!(list_built(&workspace), vec!["", "papers/ml"]);
+    }
+
+    #[test]
+    fn remove_store_files_clears_the_store_and_sidecars() {
+        let temp = tempfile::tempdir().unwrap();
+        let graph = temp.path().join("graphs/papers/ml/graph.sqlite");
+        std::fs::create_dir_all(graph.parent().unwrap()).unwrap();
+        for suffix in ["", "-wal", "-shm", "-journal"] {
+            std::fs::write(format!("{}{suffix}", graph.display()), "x").unwrap();
+        }
+        remove_store_files(&graph);
+        for suffix in ["", "-wal", "-shm", "-journal"] {
+            assert!(!Path::new(&format!("{}{suffix}", graph.display())).exists());
+        }
     }
 }
