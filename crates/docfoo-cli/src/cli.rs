@@ -126,7 +126,7 @@ impl Command {
 }
 
 #[derive(Debug, Args)]
-#[command(group = ArgGroup::new("action").required(true).multiple(false).args(["query", "index", "status", "vis"]))]
+#[command(group = ArgGroup::new("action").required(true).multiple(false).args(["query", "index", "status"]))]
 pub struct KgArgs {
     /// Ask the knowledge graph a question (one-shot final answer)
     #[arg(long, value_name = "QUESTION")]
@@ -137,15 +137,6 @@ pub struct KgArgs {
     /// Show built graphs and coverage
     #[arg(long)]
     pub status: bool,
-    /// Open the live knowledge-graph visualizer in a browser
-    #[arg(long)]
-    pub vis: bool,
-    /// With --vis: bind this port (default: an ephemeral port)
-    #[arg(long, value_name = "N")]
-    pub port: Option<u16>,
-    /// With --vis: do not open the browser automatically
-    #[arg(long)]
-    pub no_open: bool,
     /// Resource folder scope (empty = whole library)
     #[arg(long, value_name = "DIR", default_value = "")]
     pub scope: String,
@@ -212,17 +203,8 @@ pub struct ScanArgs {
 }
 
 #[derive(Debug, Args)]
-#[command(group = ArgGroup::new("action").required(true).multiple(false).args(["vis", "list", "read", "outline", "search"]))]
+#[command(group = ArgGroup::new("action").required(true).multiple(false).args(["list", "read", "outline", "search"]))]
 pub struct ResourcesArgs {
-    /// Serve the resource library as a read-only browser
-    #[arg(long)]
-    pub vis: bool,
-    /// With --vis: port to bind (default: an ephemeral port)
-    #[arg(long, value_name = "N")]
-    pub port: Option<u16>,
-    /// With --vis: don't open a browser
-    #[arg(long)]
-    pub no_open: bool,
     /// List the resource tree (one level by default)
     #[arg(long)]
     pub list: bool,
@@ -232,7 +214,7 @@ pub struct ResourcesArgs {
     /// With --list: include figure rel paths; with --read: print only figure lines
     #[arg(long)]
     pub figures: bool,
-    /// With --list/--search/--vis: use this folder instead of the root
+    /// With --list/--search: use this folder instead of the root
     #[arg(long, value_name = "DIR")]
     pub rel: Option<String>,
     /// Print a file's text

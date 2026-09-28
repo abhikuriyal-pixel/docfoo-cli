@@ -21,5 +21,4 @@ pub mod setup;
 pub mod sidecar;
 pub mod update;
 pub mod util;
-pub mod web;
 pub mod workspace;

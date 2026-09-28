@@ -2,7 +2,7 @@
 
 Barebones, scriptable DocFoo for the shell and for agents (Hermes/Slack).
 
-> **Status:** All stages complete (1-6), 160 tests green, clippy clean. See
+> **Status:** All stages complete (1-6), 138 tests green, clippy clean. See
 > `PLAN.md` for the architecture and `docs/HERMES.md` for the Hermes/Slack
 > integration (plugin, `dfq` trigger routing, rich Slack rendering,
 > persistent sidecar, custom providers).
@@ -30,13 +30,6 @@ point at the TypeScript source:
 ```bash
 export DOCFOO_SIDECAR_BIN=/path/to/sidecar/docfoo-agent   # explicit binary
 export DOCFOO_SIDECAR_TS=/path/to/sidecar/main.ts         # run with bun
-```
-
-The visualizer frontend is dependency-free ES modules embedded into the
-binary; its pure modules are tested with Node 22+:
-
-```bash
-node --test crates/docfoo-cli/tests/js/*.test.mjs
 ```
 
 On Linux/WSL the sidecar can run as a persistent systemd user service
@@ -72,9 +65,6 @@ docfoo kg --index --scope papers/ml
 # Show built graphs and counts
 docfoo kg --status [--scope DIR] [--json]
 
-# Open the live visualizer (loopback browser page; Ctrl-C stops the server)
-docfoo kg --vis [--scope DIR] [--port N] [--no-open]
-
 # Ask a question: one-shot final answer, no agent loop
 docfoo kg --query "How are the National Education Policy 2020 and the NCF connected?"
 
@@ -94,23 +84,9 @@ Query flags: `--scope DIR`, `--model provider/model`, `--reasoning off|minimal|�
 `--stream` (synthesis deltas to stderr), `--save`, `--hermes-final`,
 `--plain-tables`, `--no-sources`, `--quote-sources`, `--max-chars N`.
 
-`kg --vis` serves an embedded page on `127.0.0.1` (ephemeral port by default;
-`--port N` pins one) and opens the default browser unless `--no-open` is given.
-It reproduces the desktop app's knowledge-graph window: the same deterministic
-canvas layout and query choreography (seed halos, traversal hop trails,
-escalation banners, evidence strip), a chat composer that streams the answer
-with citations, inline figures and GFM tables, a scope dropdown over every
-built graph, a session-only model picker, a fixed reasoning cycle, and a
-replay transport for the last turn. Queries are ephemeral — nothing is written
-to `kg-chats/` unless you use `kg --query --save`.
-
 ### Resources and notes
 
 ```bash
-# Serve the library as a read-only browser (cards with random figure covers,
-# document reader with outline, highlight notes)
-docfoo resources --vis [--rel DIR] [--port N] [--no-open]
-
 # One level of the library (folders summarized: files, md, figures, size)
 docfoo resources --list [--rel DIR] [--figures] [--json]
 
@@ -129,25 +105,12 @@ docfoo resources --outline card/content.md [--json]
 # Case-insensitive substring search with optional context
 docfoo resources --search "query" [--rel DIR|FILE] [--context 0-5] [--limit N] [--json]
 
-# Notes (read-only from the CLI; the browser adds, edits and deletes them)
+# Notes (read-only)
 docfoo notes --list [--resource card/content.md] [--json]
 docfoo notes --read NOTE_ID [--json]
 ```
 
-`resources --vis` serves an embedded page on `127.0.0.1` (ephemeral port by
-default; `--port N` pins one) and opens the default browser unless `--no-open`
-is given. It reproduces the desktop app's resource browser and reader: cards
-with a random figure as the cover (the die button re-rolls every cover, folders
-collage up to four), breadcrumb drill-down, document tabs, an outline panel,
-text/figure sliders (20px / 65%), and general Markdown through the same
-marked + DOMPurify + KaTeX pipeline as the desktop reader (GFM tables,
-centered figures, OCR math, escaped-tag and spaced-path repairs; code blocks
-are plain monospace).
-The page never changes resource files — no create, rename, delete, move or
-edit. Selecting text offers **Note**: notes are written in the desktop app's
-`notes.json` schema, so they round-trip with the desktop app, and can be
-edited and deleted from the notes panel. Images open in a lightbox; other
-files are listed as inert cards.
+The resource commands are read-only and never change files.
 
 `--read` output is line-numbered (`NNNNN | text`) so citations stay exact; the
 JSON envelope also carries `text` (plain), `nextOffset`, and the window's
@@ -289,9 +252,9 @@ so `hermes update` never wipes it. See [`hermes/README.md`](hermes/README.md).
 ## Roadmap
 
 All six plan stages are implemented. `scripts/acceptance.sh` runs the offline
-acceptance checks (build, tests, fresh-workspace smoke tests, vis frontend
-module tests when Node is present) and an optional live KG query when
-`DOCFOO_ACCEPTANCE_WORKSPACE` and `DOCFOO_ACCEPTANCE_QUERY` are set.
+acceptance checks (build, tests, fresh-workspace smoke tests) and an optional
+live KG query when `DOCFOO_ACCEPTANCE_WORKSPACE` and `DOCFOO_ACCEPTANCE_QUERY`
+are set.
 
 Possible follow-ups (out of v1 scope): `docfoo ask` (multi-step agent mode),
 Koofr cloud backup push/pull, community uploads, OAuth provider logins,

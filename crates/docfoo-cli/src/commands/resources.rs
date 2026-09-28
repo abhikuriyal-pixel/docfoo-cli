@@ -9,21 +9,6 @@ use crate::resources::{read, tree};
 use crate::workspace::Workspace;
 
 pub fn run(format: OutputFormat, workspace: &Workspace, args: &ResourcesArgs) -> Result<()> {
-    if args.vis {
-        if args.list
-            || args.tree
-            || args.figures
-            || args.read.is_some()
-            || args.outline.is_some()
-            || args.search.is_some()
-        {
-            return Err(CliError::Usage(
-                "--vis cannot be combined with --list, --read, --outline or --search".to_string(),
-            ));
-        }
-        return crate::resources::vis::run(workspace, args, args.rel.as_deref().unwrap_or(""));
-    }
-
     let root = workspace.resources_dir();
     let workspace_display = workspace.root.display().to_string();
 
@@ -40,7 +25,7 @@ pub fn run(format: OutputFormat, workspace: &Workspace, args: &ResourcesArgs) ->
         return search(format, &root, &workspace_display, query, args);
     }
     Err(CliError::Usage(
-        "resources needs --vis, --list, --read, --outline or --search".to_string(),
+        "resources needs --list, --read, --outline or --search".to_string(),
     ))
 }
 

@@ -1,10 +1,7 @@
 //! Notes — `notes.json` is a map of resource rel → note objects.
 //!
-//! `docfoo notes` reads them; the resource browser (`resources --vis`) writes
-//! them (create, edit, delete) in the desktop app's schema, so a note jotted
-//! in the browser appears in the desktop app and vice versa. Writes are
-//! whole-file read-modify-write with an atomic rename, and every other
-//! resource's notes and unknown fields are preserved.
+//! `docfoo notes` reads them in the desktop app's schema, so a note written in
+//! the desktop app appears in the CLI and vice versa.
 
 use serde_json::{Map, Value};
 

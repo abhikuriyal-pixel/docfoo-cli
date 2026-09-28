@@ -29,14 +29,11 @@ pub fn run(cli: &Cli, format: OutputFormat, workspace: &Workspace, args: &KgArgs
     if args.status {
         return run_status(format, workspace, &scope);
     }
-    if args.vis {
-        return kg::vis::run(workspace, args, &scope);
-    }
     if let Some(query) = &args.query {
         return run_query(cli, format, workspace, args, &scope, query);
     }
     Err(CliError::Usage(
-        "kg needs --query, --index, --status or --vis".to_string(),
+        "kg needs --query, --index or --status".to_string(),
     ))
 }
 

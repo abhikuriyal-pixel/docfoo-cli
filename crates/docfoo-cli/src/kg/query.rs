@@ -114,10 +114,10 @@ pub fn routing_value(trace: &Trace) -> Value {
     serde_json::to_value(&trace.routing).unwrap_or_else(|_| json!({}))
 }
 
-/// The `data` payload shared by `docfoo kg --query` and the visualizer.
+/// The `data` payload for `docfoo kg --query`.
 ///
-/// Keeping one builder here means the interactive page and the scriptable
-/// command can never drift apart in shape, citations or figure resolution.
+/// One builder keeps the command's shape, citations and figure resolution in
+/// one place.
 pub fn result_data(
     workspace: &Workspace,
     scope: &str,
