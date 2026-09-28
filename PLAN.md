@@ -46,8 +46,8 @@ Buddy, KG chat history browsing, community uploads, Koofr cloud backup, OAuth pr
 | 11 | Platforms | **Linux/WSL x64 + Windows x64.** |
 | 12 | Model/auth | Shared workspace: `model-selection.json` + Pi `auth.json`; `docfoo model --get/--set/--list`, `docfoo auth --status/--set/--logout`. |
 | 13 | Install | `install.sh` + versioned release tarballs; `docfoo update [--check]`. |
-| 14 | Code reuse | **Duplicate thin Tauri glue** in the CLI crate; heavy crates reused via path deps. |
-| 15 | Repo coupling | `DocFoo_CLI` references `../DocFoo/crates/docfoo-kg` and `docfoo-ocr` via path; release builds vendor the crates into the tarball. |
+| 14 | Code reuse | **Duplicate thin Tauri glue** in the CLI crate; heavy crates (`docfoo-kg`, `docfoo-ocr`) vendored under `crates/` from the desktop repo. |
+| 15 | Repo coupling | The CLI is standalone: a plain clone builds with no `../DocFoo` access. `scripts/sync-crates.sh` copies the two vendored crates from a desktop checkout (`--check` detects drift). |
 | 16 | KG history | **Ephemeral** by default; `--save` writes an app-compatible `kg-chats/` entry. |
 
 ---
@@ -315,7 +315,7 @@ DocFoo_CLI/
 │   ├── build.sh
 │   └── build.ps1
 ├── crates/docfoo-cli/
-│   ├── Cargo.toml                 # path deps: ../../../DocFoo/crates/docfoo-kg, docfoo-ocr
+│   ├── Cargo.toml                 # path deps: ../docfoo-kg, ../docfoo-ocr (vendored)
 │   └── src/
 │       ├── main.rs
 │       ├── cli.rs                 # clap tree

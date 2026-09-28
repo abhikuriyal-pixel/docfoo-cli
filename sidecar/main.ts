@@ -232,7 +232,7 @@ async function main(): Promise<void> {
   }
 
   fallbackTarget = process.stdout;
-  emit({ type: "ready", version: "0.1.4" });
+  emit({ type: "ready", version: "0.2.0" });
 
   const lines = createInterface({ input: process.stdin, terminal: false });
   lines.on("line", (line) => dispatch(null, line));
