@@ -2,10 +2,11 @@
 
 Barebones, scriptable DocFoo for the shell and for agents (Hermes/Slack).
 
-> **Status:** All stages complete (1-6), 138 tests green, clippy clean. See
-> `PLAN.md` for the architecture and `docs/HERMES.md` for the Hermes/Slack
-> integration (plugin, `dfq` trigger routing, rich Slack rendering,
-> persistent sidecar, custom providers).
+> **Status:** All stages complete (1-6), 243 tests green (workspace, including
+> the vendored crates), `docfoo-cli` clippy clean. See `PLAN.md` for the
+> architecture and `docs/HERMES.md` for the Hermes/Slack integration (plugin,
+> `dfq` trigger routing, rich Slack rendering, persistent sidecar, custom
+> providers).
 
 ## Build
 
@@ -14,6 +15,12 @@ cargo build                   # debug: target/debug/docfoo
 cargo build --release         # release: target/release/docfoo
 ./scripts/acceptance.sh       # offline build + test + smoke checks
 ```
+
+`docfoo-kg` and `docfoo-ocr` are vendored under `crates/` so a plain clone
+builds without the desktop repo. `scripts/sync-crates.sh` copies them from a
+DocFoo checkout (`DOCFOO_UPSTREAM` overrides the default `../DocFoo`), and
+`scripts/sync-crates.sh --check` fails when they drift. The copies are mirrors:
+fix the crates upstream, then re-sync — don't edit them here.
 
 The model sidecar (`docfoo-agent`) is a Bun-compiled completion service built
 from `sidecar/`:

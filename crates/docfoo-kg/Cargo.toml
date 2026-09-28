@@ -1,0 +1,13 @@
+[package]
+name = "docfoo-kg"
+version = "0.1.0"
+edition = "2021"
+description = "DocFoo Index: resources markdown -> knowledge graph (Graph-RAG build path ported from kg_demo)"
+
+[dependencies]
+regex = "1"
+rusqlite = { version = "0.40.2", default-features = false, features = ["bundled", "functions"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+sha2 = "0.10"
+thiserror = "2"

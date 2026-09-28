@@ -1,0 +1,21 @@
+[package]
+name = "docfoo-ocr"
+version = "0.1.0"
+edition = "2021"
+description = "DocFoo Scan: PDF/image -> layout-aware Text OCR and optional Figures & Tables analysis -> markdown"
+
+[dependencies]
+base64 = "0.23"
+image = { version = "0.25.10", default-features = false, features = ["png", "jpeg", "gif", "bmp", "webp", "tiff"] }
+ndarray = "0.17"
+# ort is pinned exactly (same as owl-ocr): the layout inference code is
+# written against the rc.12 API; rc.13 introduces breaking changes.
+# load-dynamic -> no onnxruntime.lib is linked; the dll is loaded
+# explicitly via ort::init_from (resolved by the caller, e.g. models/).
+ort = { version = "=2.0.0-rc.12", features = ["load-dynamic"] }
+pdfium-render = { version = "0.9.3", features = ["thread_safe"] }
+regex = "1"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+thiserror = "2"
+ureq = { version = "=3.3.0", default-features = false, features = ["rustls"] }
