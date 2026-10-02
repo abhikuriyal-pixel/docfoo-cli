@@ -344,13 +344,13 @@ pub struct SetupArgs {
     /// Only check what is missing
     #[arg(long)]
     pub check: bool,
-    /// Copy the layout model (and Windows DLLs) from a local DocFoo models directory
+    /// Copy the layout model from a local DocFoo models directory instead of downloading
     #[arg(long, value_name = "DIR")]
     pub from: Option<PathBuf>,
-    /// Download the layout model from this URL when --from is not given
+    /// Download the layout model from this URL instead of the pinned one (checksum not verified)
     #[arg(long, value_name = "URL")]
     pub layout_model_url: Option<String>,
-    /// Re-download/re-copy even when present
+    /// Re-download/re-copy even when present and valid
     #[arg(long)]
     pub force: bool,
 }

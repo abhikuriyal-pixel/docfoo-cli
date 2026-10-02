@@ -31,7 +31,7 @@ pub fn run(format: OutputFormat, workspace: &Workspace, args: &SetupArgs) -> Res
     )?;
     if !status.ready() {
         return Err(CliError::Message(format!(
-            "setup is incomplete — missing {}. On Linux the shared libraries download automatically; the layout model needs `--from <DocFoo/models>` or `--layout-model-url <url>`.",
+            "setup is incomplete — still missing {}",
             status.missing().join(", ")
         )));
     }

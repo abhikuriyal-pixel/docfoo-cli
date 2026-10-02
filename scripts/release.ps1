@@ -20,9 +20,33 @@ Remove-Item -Recurse -Force $dist -ErrorAction SilentlyContinue
 New-Item -ItemType Directory -Path $dist | Out-Null
 Copy-Item target/release/docfoo.exe "$dist/"
 Copy-Item sidecar/docfoo-agent.exe "$dist/"
-Copy-Item install.sh, README.md "$dist/"
+Copy-Item install.sh, install.ps1, README.md "$dist/"
 
-Compress-Archive -Path $dist -DestinationPath "dist/$name.zip" -Force
+# Bundle the MSVC runtime so the archive runs on a clean Windows install:
+# docfoo.exe and the downloaded ONNX Runtime import these DLLs, which are not
+# part of Windows itself (the UCRT is).
+$crtDlls = @("vcruntime140.dll", "vcruntime140_1.dll", "msvcp140.dll", "msvcp140_1.dll")
+foreach ($dll in $crtDlls) {
+  $source = Join-Path $env:SystemRoot "System32\$dll"
+  if (-not (Test-Path $source)) {
+    throw "missing $dll in System32 - install the VC++ 2015-2022 Redistributable first"
+  }
+  Copy-Item $source (Join-Path $dist $dll)
+}
+Write-Host "bundled MSVC runtime: $($crtDlls -join ', ')"
+
+# Use libarchive's tar (bundled with Windows 10 1803+) to build the zip:
+# PowerShell 5.1's Compress-Archive writes backslash path separators, which
+# standard unzip tools reject. `tar -a` picks the zip format from the suffix.
+$tar = Join-Path $env:SystemRoot "System32\tar.exe"
+if (-not (Test-Path $tar)) { throw "$tar not found; Windows 10 1803+ is required to package" }
+& $tar -a -c -f "dist/$name.zip" -C dist $name
+if ($LASTEXITCODE -ne 0) { throw "tar failed with exit code $LASTEXITCODE" }
 $hash = (Get-FileHash "dist/$name.zip" -Algorithm SHA256).Hash.ToLower()
-"$hash  $name.zip" | Out-File "dist/$name.zip.sha256" -Encoding ascii
+# LF (not CRLF) so `sha256sum -c` works everywhere.
+[System.IO.File]::WriteAllText(
+  (Join-Path (Get-Location) "dist/$name.zip.sha256"),
+  "$hash  $name.zip`n",
+  [System.Text.UTF8Encoding]::new($false)
+)
 Write-Host "wrote dist/$name.zip"

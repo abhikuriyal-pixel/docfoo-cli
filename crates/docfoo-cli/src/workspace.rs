@@ -6,7 +6,8 @@
 //!   3. `~/.docfoo` (`USERPROFILE` on Windows, `HOME` elsewhere)
 //!
 //! The layout matches the desktop app's `db/` folder so `--workspace` can
-//! point straight at the app's data.
+//! point straight at the app's data. Scan dependencies live in
+//! `<root>/models`; `DOCFOO_MODELS_DIR` overrides that location.
 
 use std::path::{Path, PathBuf};
 
@@ -14,6 +15,7 @@ use crate::error::{CliError, Result};
 
 pub const DEFAULT_DIR_NAME: &str = ".docfoo";
 pub const AGENT_DIR_NAME: &str = ".agent";
+pub const MODELS_DIR_NAME: &str = "models";
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Workspace {
@@ -31,7 +33,6 @@ pub struct ResolveInput {
     pub env_agent_dir: Option<String>,
     pub env_models_dir: Option<String>,
     pub home: Option<PathBuf>,
-    pub cache: Option<PathBuf>,
 }
 
 pub fn resolve(input: ResolveInput) -> Result<Workspace> {
@@ -51,7 +52,7 @@ pub fn resolve(input: ResolveInput) -> Result<Workspace> {
 
     let models_dir = match non_empty(input.env_models_dir) {
         Some(value) => absolutize(Path::new(&value))?,
-        None => default_models_dir(input.cache.as_deref(), input.home.as_deref())?,
+        None => root.join(MODELS_DIR_NAME),
     };
 
     Ok(Workspace {
@@ -68,7 +69,6 @@ pub fn resolve_from_env(cli_workspace: Option<&Path>) -> Result<Workspace> {
         env_agent_dir: std::env::var("DOCFOO_AGENT_DIR").ok(),
         env_models_dir: std::env::var("DOCFOO_MODELS_DIR").ok(),
         home: home_dir(),
-        cache: cache_dir(),
     })
 }
 
@@ -133,18 +133,6 @@ fn default_root(home: Option<&Path>) -> Result<PathBuf> {
     Ok(home.join(DEFAULT_DIR_NAME))
 }
 
-fn default_models_dir(cache: Option<&Path>, home: Option<&Path>) -> Result<PathBuf> {
-    if let Some(cache) = cache {
-        return Ok(cache.join("docfoo").join("models"));
-    }
-    if let Some(home) = home {
-        return Ok(home.join(".cache").join("docfoo").join("models"));
-    }
-    Err(CliError::Message(
-        "cannot determine the cache directory; set DOCFOO_MODELS_DIR".to_string(),
-    ))
-}
-
 /// Make a path absolute without requiring it to exist.
 pub fn absolutize(path: &Path) -> Result<PathBuf> {
     if path.is_absolute() {
@@ -165,19 +153,6 @@ fn home_dir() -> Option<PathBuf> {
     }
 }
 
-fn cache_dir() -> Option<PathBuf> {
-    #[cfg(windows)]
-    {
-        std::env::var_os("LOCALAPPDATA").map(PathBuf::from)
-    }
-    #[cfg(not(windows))]
-    {
-        std::env::var_os("XDG_CACHE_HOME")
-            .map(PathBuf::from)
-            .or_else(|| home_dir().map(|home| home.join(".cache")))
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -186,7 +161,6 @@ mod tests {
         ResolveInput {
             cli_workspace: Some(root.join("ws")),
             home: Some(root.join("home")),
-            cache: Some(root.join("cache")),
             ..ResolveInput::default()
         }
     }
@@ -245,10 +219,7 @@ mod tests {
         let temp = tempfile::tempdir().unwrap();
         let workspace = resolve(input(temp.path())).unwrap();
         assert_eq!(workspace.agent_dir, workspace.root.join(AGENT_DIR_NAME));
-        assert_eq!(
-            workspace.models_dir,
-            temp.path().join("cache").join("docfoo").join("models")
-        );
+        assert_eq!(workspace.models_dir, workspace.root.join(MODELS_DIR_NAME));
     }
 
     #[test]

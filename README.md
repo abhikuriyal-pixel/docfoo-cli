@@ -42,8 +42,11 @@ export DOCFOO_SIDECAR_TS=/path/to/sidecar/main.ts         # run with bun
 On Linux/WSL the sidecar can run as a persistent systemd user service
 (`scripts/docfoo-sidecar.service`); the CLI then connects to
 `<workspace>/.agent/sidecar.sock` instead of spawning a process per command.
-Scan support provisions its native deps once with `docfoo setup`
-(optionally `--from /path/to/DocFoo/models`).
+Scan support provisions its native deps once with `docfoo setup` — the pinned,
+checksummed ONNX Runtime, PDFium and PP-DocLayoutV3 model are downloaded into
+`<workspace>/models` on both Windows and Linux, so no desktop app or manual
+file selection is needed (`--from /path/to/DocFoo/models` copies the model
+from a local folder instead).
 
 ## Usage (current)
 
@@ -146,9 +149,11 @@ next run.
 ### Scan and setup
 
 ```bash
-# Provision scan's native dependencies (Linux downloads pinned, checksummed
-# ONNX Runtime 1.28.0 + PDFium 151.0.7881.0; --from copies the layout model
-# from a local DocFoo models/ folder and, on Windows, its DLLs)
+# Provision scan's native dependencies into <workspace>/models.
+# Pinned + checksummed downloads (Windows and Linux): ONNX Runtime 1.28.0,
+# PDFium 151.0.7881.0 and the PP-DocLayoutV3 layout model. Valid files are
+# skipped; progress goes to stderr and a JSON envelope to stdout.
+# `--from DIR` copies the model from a local DocFoo models/ folder instead.
 docfoo setup [--check] [--from DIR] [--layout-model-url URL] [--force] [--json]
 
 # OCR a PDF or image into resources/<destination>/<stem>/
@@ -160,7 +165,7 @@ docfoo scan FILE [--parallel N] [--text_model KEY] [--figure_model KEY]
 `--figure_model` defaults to `--text_model`; `--no-figures` disables figure and
 table analysis (asset crops are still saved). The effective native paths honor
 `DOCFOO_LAYOUT_MODEL`, `DOCFOO_ORT_DLL` and `DOCFOO_PDFIUM_DLL`, and
-`DOCFOO_MODELS_DIR` overrides the models cache location.
+`DOCFOO_MODELS_DIR` overrides the models directory (default `<workspace>/models`).
 
 Global flags: `--workspace DIR`, `--json`, `--format markdown|slack|json`,
 `--quiet`, `--verbose`, `--no-color`.
@@ -173,9 +178,10 @@ The workspace resolves in this order:
 2. `$DOCFOO_WORKSPACE`
 3. `~/.docfoo` (`%USERPROFILE%\.docfoo` on Windows)
 
-`DOCFOO_AGENT_DIR` and `DOCFOO_MODELS_DIR` override the derived agent and native
-models directories. The layout matches the desktop app's `db/` folder, so you
-can point `--workspace` at an existing DocFoo library. Model slots, provider
+Native scan dependencies live in `<workspace>/models` (`~/.docfoo/models` by
+default); `DOCFOO_AGENT_DIR` and `DOCFOO_MODELS_DIR` override the derived
+agent and models directories. The layout matches the desktop app's `db/`
+folder, so you can point `--workspace` at an existing DocFoo library. Model slots, provider
 credentials and KG settings are shared with the app (`model-selection.json`,
 Pi `auth.json`, `kg-settings.json`).
 
@@ -206,12 +212,14 @@ Human mode writes errors to stderr. Exit codes: `0` success, `1` runtime error,
 ## Install and update
 
 ```bash
-# Linux/WSL: install the latest release into ~/.local/bin
-./install.sh                 # or --local to build from this checkout
+# Linux/WSL: install the latest release (and scan deps) into ~/.local/bin
+curl -fsSL https://raw.githubusercontent.com/abhikuriyal-pixel/docfoo-cli/master/install.sh | bash
 
-# Windows: build from source and keep the pair together
-cargo build --release
-cd sidecar && ./build.ps1    # produces docfoo-agent.exe next to docfoo.exe
+# Windows (PowerShell): install to %USERPROFILE%\.docfoo\bin, add it to PATH,
+# then provision scan dependencies with `docfoo setup`
+irm https://raw.githubusercontent.com/abhikuriyal-pixel/docfoo-cli/master/install.ps1 | iex
+
+# From a checkout instead: ./install.sh --local
 
 # Check for or install a newer release
 docfoo update --check
@@ -224,8 +232,8 @@ docfoo completions bash        # bash | zsh | fish | powershell | elvish
 Release artifacts are `docfoo-cli-<version>-linux-x64.tar.gz` and
 `docfoo-cli-<version>-windows-x64.zip` plus `.sha256` sidecars; `scripts/release.sh`
 and `scripts/release.ps1` build them locally, and they are published to the public
-`abhikuriyal-pixel/docfoo-cli-releases` repo. Both `install.sh` and `docfoo update`
-read `DOCFOO_REPO` if you mirror releases elsewhere.
+`abhikuriyal-pixel/docfoo-cli` repo. The `install.sh`/`install.ps1` bootstraps
+and `docfoo update` read `DOCFOO_REPO` if you mirror releases elsewhere.
 
 ## Providers and models
 
@@ -254,13 +262,3 @@ python hermes\install.py       # Windows
 The plugin lives outside the Hermes repo (`~/.hermes/plugins/docfoo_plugin/`),
 so `hermes update` never wipes it. See [`hermes/README.md`](hermes/README.md).
 
-## Roadmap
-
-All six plan stages are implemented. `scripts/acceptance.sh` runs the offline
-acceptance checks (build, tests, fresh-workspace smoke tests) and an optional
-live KG query when `DOCFOO_ACCEPTANCE_WORKSPACE` and `DOCFOO_ACCEPTANCE_QUERY`
-are set.
-
-Possible follow-ups (out of v1 scope): `docfoo ask` (multi-step agent mode),
-Koofr cloud backup push/pull, community uploads, OAuth provider logins,
-macOS/arm64 builds.

@@ -8,7 +8,7 @@
 #   ./install.sh --version 0.2.0 # install a specific release
 set -euo pipefail
 
-REPO="${DOCFOO_REPO:-abhikuriyal-pixel/docfoo-cli-releases}"
+REPO="${DOCFOO_REPO:-abhikuriyal-pixel/docfoo-cli}"
 PREFIX="${DOCFOO_PREFIX:-$HOME/.local/bin}"
 
 # The release repo is public, so no token is needed. GITHUB_TOKEN/GH_TOKEN are

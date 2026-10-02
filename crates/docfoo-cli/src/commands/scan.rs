@@ -51,7 +51,7 @@ pub fn run(cli: &Cli, format: OutputFormat, workspace: &Workspace, args: &ScanAr
     let status = crate::setup::check(workspace);
     if !status.ready() {
         return Err(CliError::Message(format!(
-            "scan dependencies are missing ({}). Run `docfoo setup` (Linux) or `docfoo setup --from <DocFoo/models>` first.",
+            "scan dependencies are missing ({}). Run `docfoo setup` first.",
             status.missing().join(", ")
         )));
     }

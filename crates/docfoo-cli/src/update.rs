@@ -1,6 +1,6 @@
 //! `docfoo update` — GitHub release checks and self-update.
 //!
-//! The repository is `DOCFOO_REPO` (default `abhikuriyal-pixel/docfoo-cli-releases`),
+//! The repository is `DOCFOO_REPO` (default `abhikuriyal-pixel/docfoo-cli`),
 //! and `DOCFOO_UPDATE_API_URL` can point the check at a mock. A release ships
 //! `docfoo-cli-<version>-<platform>.tar.gz` (Linux) or `.zip` (Windows) plus a
 //! `.sha256` sidecar; self-update verifies the checksum before replacing the
@@ -14,7 +14,7 @@ use serde_json::Value;
 use crate::error::{CliError, Result};
 use crate::util::sha256_file;
 
-const DEFAULT_REPO: &str = "abhikuriyal-pixel/docfoo-cli-releases";
+const DEFAULT_REPO: &str = "abhikuriyal-pixel/docfoo-cli";
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ReleaseInfo {
