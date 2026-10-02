@@ -209,9 +209,6 @@ Human mode writes errors to stderr. Exit codes: `0` success, `1` runtime error,
 # Linux/WSL: install the latest release into ~/.local/bin
 ./install.sh                 # or --local to build from this checkout
 
-# Private repo: export a token first (the same is needed for `docfoo update`)
-export GITHUB_TOKEN="$(gh auth token)"
-
 # Windows: build from source and keep the pair together
 cargo build --release
 cd sidecar && ./build.ps1    # produces docfoo-agent.exe next to docfoo.exe
@@ -226,8 +223,9 @@ docfoo completions bash        # bash | zsh | fish | powershell | elvish
 
 Release artifacts are `docfoo-cli-<version>-linux-x64.tar.gz` and
 `docfoo-cli-<version>-windows-x64.zip` plus `.sha256` sidecars; `scripts/release.sh`
-and `scripts/release.ps1` build them locally. Set `DOCFOO_REPO` to your GitHub
-`owner/repo` before releasing.
+and `scripts/release.ps1` build them locally, and they are published to the public
+`abhikuriyal-pixel/docfoo-cli-releases` repo. Both `install.sh` and `docfoo update`
+read `DOCFOO_REPO` if you mirror releases elsewhere.
 
 ## Providers and models
 
