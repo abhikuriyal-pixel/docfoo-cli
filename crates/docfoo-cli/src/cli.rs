@@ -152,6 +152,9 @@ pub struct KgArgs {
     /// Persist the answer to kg-chats/
     #[arg(long)]
     pub save: bool,
+    /// Include a bounded original graph and recorded query stages (JSON only)
+    #[arg(long, requires = "query")]
+    pub snapshot: bool,
     /// Stream synthesis deltas to stderr
     #[arg(long)]
     pub stream: bool,

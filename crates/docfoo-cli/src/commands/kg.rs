@@ -22,6 +22,11 @@ use crate::sidecar::Sidecar;
 use crate::workspace::Workspace;
 
 pub fn run(cli: &Cli, format: OutputFormat, workspace: &Workspace, args: &KgArgs) -> Result<()> {
+    if args.snapshot && (args.query.is_none() || !matches!(format, OutputFormat::Json)) {
+        return Err(CliError::Usage(
+            "--snapshot requires --query and --json or --format json".into(),
+        ));
+    }
     let scope = paths::normalize_scope(&args.scope)?;
     if args.index {
         return run_index(cli, format, workspace, args, &scope);
@@ -115,7 +120,12 @@ fn run_index(
         "vocabChanged": report.vocab_changed,
         "message": message,
     });
-    output::success(format, "kg.index", &workspace.root.display().to_string(), data)
+    output::success(
+        format,
+        "kg.index",
+        &workspace.root.display().to_string(),
+        data,
+    )
 }
 
 fn run_status(format: OutputFormat, workspace: &Workspace, scope: &str) -> Result<()> {
@@ -151,9 +161,15 @@ fn run_status(format: OutputFormat, workspace: &Workspace, scope: &str) -> Resul
         "entities": entities,
         "relations": relations,
         "sections": sections,
+        "capabilities": [kg::snapshot::CAPABILITY],
         "message": message,
     });
-    output::success(format, "kg.status", &workspace.root.display().to_string(), data)
+    output::success(
+        format,
+        "kg.status",
+        &workspace.root.display().to_string(),
+        data,
+    )
 }
 
 fn run_query(
@@ -193,6 +209,7 @@ fn run_query(
         reasoning,
         client,
         &cancel,
+        args.snapshot,
         &mut on_stage,
         &mut on_delta,
     )?;
@@ -219,9 +236,12 @@ fn run_query(
     let data = kg::query::result_data(workspace, scope, query, &model, &report, saved.as_deref());
 
     match format {
-        OutputFormat::Json => {
-            output::success(format, "kg.query", &workspace.root.display().to_string(), data)
-        }
+        OutputFormat::Json => output::success(
+            format,
+            "kg.query",
+            &workspace.root.display().to_string(),
+            data,
+        ),
         OutputFormat::Markdown => {
             println!("{}", report.answer);
             Ok(())

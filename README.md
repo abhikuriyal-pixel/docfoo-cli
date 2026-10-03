@@ -91,8 +91,28 @@ docfoo kg --query "..." --save
 ```
 
 Query flags: `--scope DIR`, `--model provider/model`, `--reasoning off|minimal|…|max`,
-`--stream` (synthesis deltas to stderr), `--save`, `--hermes-final`,
+`--snapshot` (JSON-only bounded graph/query replay), `--stream` (synthesis deltas to stderr), `--save`, `--hermes-final`,
 `--plain-tables`, `--no-sources`, `--quote-sources`, `--max-chars N`.
+
+#### Query replay snapshots
+
+`docfoo kg --query "..." --json --snapshot` adds `data.replay` with schema
+`docfoo.kg.replay/1`: `scope`, `buildUid`, `nodes` (`id,name,type,degree`),
+`edges` (`source,target,rel`), evidence `sections` (`title,ids`), and authentic
+`frames` (`type:"stage",pass,seq,step,data`). Ordinary query output is unchanged.
+`kg --status --json` advertises `kg.query.snapshot.v1` in `data.capabilities`.
+Consumers must check that capability before passing the new flag.
+
+Small graphs are complete. Large graphs prioritize recorded entities, evidence
+and one-hop context, limited to **1,000 nodes / 4,000 edges / 500 frames** (plus
+an overflow marker). `totalNodes/totalEdges`, `omittedNodes/omittedEdges`,
+`traceTruncated` and `eventListCap:64` describe these bounds. Stage lists are
+already bounded by retrieval; replay is not a log of every internal BFS node.
+One SQLite read transaction pins the queried graph through export, without
+hydrating the whole graph. Payloads over 4 MB, or export failures, return
+`replayError` without invalidating the answer. No HTTP visualizer is started.
+Snapshots are returned, not saved by CLI `--save`; PiMinions owns their history
+and backup retention.
 
 ### Resources and notes
 
