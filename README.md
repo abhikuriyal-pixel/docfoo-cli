@@ -156,10 +156,12 @@ next run.
 # `--from DIR` copies the model from a local DocFoo models/ folder instead.
 docfoo setup [--check] [--from DIR] [--layout-model-url URL] [--force] [--json]
 
-# OCR a PDF or image into resources/<destination>/<stem>/
-docfoo scan FILE [--parallel N] [--text_model KEY] [--figure_model KEY]
-                [--output DEST] [--pages 1,2,3] [--prompt TEXT]
-                [--analysis-prompt TEXT] [--no-figures] [--json]
+# OCR one or more PDFs/images into resources/<destination>/<stem>/
+# --jobs N scans up to N documents at once (default 1, sequential);
+# --parallel N tunes region OCR requests inside each document.
+docfoo scan FILE... [--jobs N] [--parallel N] [--text_model KEY]
+                [--figure_model KEY] [--output DEST] [--pages 1,2,3]
+                [--prompt TEXT] [--analysis-prompt TEXT] [--no-figures] [--json]
 ```
 
 `--figure_model` defaults to `--text_model`; `--no-figures` disables figure and

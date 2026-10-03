@@ -174,9 +174,13 @@ pub struct KgArgs {
 
 #[derive(Debug, Args)]
 pub struct ScanArgs {
-    /// PDF or image file
-    pub file: PathBuf,
-    /// Parallel region OCR requests
+    /// PDF or image files
+    #[arg(required = true, num_args = 1..)]
+    pub files: Vec<PathBuf>,
+    /// Documents to scan concurrently (default: one at a time)
+    #[arg(long, value_name = "N", default_value_t = 1)]
+    pub jobs: usize,
+    /// Parallel region OCR requests per document
     #[arg(long, value_name = "N")]
     pub parallel: Option<usize>,
     /// OCR model key
