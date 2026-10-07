@@ -7,3 +7,7 @@ Include `docfoo version --json`, OS/architecture, selected archive, command flag
 Keep `docfoo` and `docfoo-agent` from the same archive. Verify the `.sha256` sidecar before installation. Choose a version with assets for your platform; several historical releases are Windows-only. `deps-v1` is a pinned model dependency, not an application update.
 
 Provider authentication/billing errors may require provider support. Vulnerability reports use the private channel in [SECURITY.md](SECURITY.md).
+
+## Download integrity
+
+If a checksum differs, do not run or install the download. Report the release version, asset filename and expected/actual SHA-256 values in an issue; do not attach credentials or private documents. Releases are published after maintainer review, and versioned asset bytes are not silently replaced.
