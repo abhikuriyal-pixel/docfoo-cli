@@ -2,7 +2,7 @@
 
 **From documents to grounded answers — in your terminal or application.**
 
-DocFoo CLI scans PDFs/images into a local Markdown library, builds scoped knowledge graphs and answers questions with citations and figures. Scriptable commands and structured JSON support application and agent integrations, including PiMinions and Hermes/Slack.
+DocFoo CLI scans PDFs/images into a local Markdown library, builds scoped knowledge graphs and answers questions with citations and figures. Scriptable commands and structured JSON support application and agent integrations, including Hermes/Slack.
 
 [Download releases](https://github.com/abhikuriyal-pixel/docfoo-cli/releases) · [Report a problem](https://github.com/abhikuriyal-pixel/docfoo-cli/issues) · [Support](SUPPORT.md)
 
