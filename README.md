@@ -31,7 +31,7 @@ Invoke-WebRequest https://raw.githubusercontent.com/abhikuriyal-pixel/docfoo-cli
 
 ### Linux / WSL x64
 
-Use a release that actually includes `docfoo-cli-<version>-linux-x64.tar.gz` and its `.sha256` sidecar; some historical versions are Windows-only. Release CI targets Linux x64 on Ubuntu 22.04, not every Linux distribution. macOS/ARM builds are not offered.
+Use a release that actually includes `docfoo-cli-<version>-linux-x64.tar.gz` and its `.sha256` sidecar; some historical versions are Windows-only. Linux x64 is verified on Ubuntu 22.04; compatibility with every Linux distribution is not guaranteed. macOS/ARM builds are not offered.
 
 ```bash
 sha256sum -c docfoo-cli-<version>-linux-x64.tar.gz.sha256
