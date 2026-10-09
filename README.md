@@ -6,7 +6,7 @@ DocFoo CLI scans PDFs/images into a local Markdown library, builds scoped knowle
 
 [Download releases](https://github.com/abhikuriyal-pixel/docfoo-cli/releases) · [Report a problem](https://github.com/abhikuriyal-pixel/docfoo-cli/issues) · [Support](SUPPORT.md)
 
-> **Code coming soon..**
+> **Repository scope**
 > This repository currently hosts documentation, installer bootstraps and binary releases. Rust/sidecar implementation and ongoing development history are maintained privately; no source-publication date is committed. Previously published MIT source retains its existing license rights.
 
 ## Install
@@ -31,7 +31,7 @@ Invoke-WebRequest https://raw.githubusercontent.com/abhikuriyal-pixel/docfoo-cli
 
 ### Linux / WSL x64
 
-Use a release that actually includes `docfoo-cli-<version>-linux-x64.tar.gz` and its `.sha256` sidecar; some historical versions are Windows-only. Future release CI targets Linux x64 on Ubuntu 22.04, not every Linux distribution. macOS/ARM builds are not offered.
+Use a release that actually includes `docfoo-cli-<version>-linux-x64.tar.gz` and its `.sha256` sidecar; some historical versions are Windows-only. Release CI targets Linux x64 on Ubuntu 22.04, not every Linux distribution. macOS/ARM builds are not offered.
 
 ```bash
 sha256sum -c docfoo-cli-<version>-linux-x64.tar.gz.sha256
@@ -52,9 +52,13 @@ All default branches are `main`. Old raw `/master/install.*` URLs are no longer 
 
 ```bash
 docfoo version --json
+docfoo doctor              # available in v0.2.1 and newer
 docfoo setup
 docfoo auth --set PROVIDER
 docfoo model --list
+# Replace these placeholders with available catalog keys:
+docfoo model --set scan provider/vision-model
+docfoo model --set kg provider/answer-model
 docfoo scan paper.pdf --output papers
 docfoo kg --index --scope papers
 docfoo kg --query "Summarize the key findings" --scope papers --json
@@ -62,6 +66,20 @@ docfoo update --check
 ```
 
 Configure suitable scanning/answering models using `docfoo model --set SLOT provider/model`; use `docfoo help` for options. Default workspace: `~/.docfoo` (`%USERPROFILE%\.docfoo` on Windows). `docfoo setup` downloads pinned, checksummed ONNX Runtime, PDFium and the layout model. The public `deps-v1` model asset is a setup dependency, not the latest CLI version.
+
+## Workflows and help
+
+| Task | Commands |
+| --- | --- |
+| Document library | `scan`, `resources`, `notes` |
+| Knowledge retrieval | `kg --index`, `kg --query`, `kg --status` |
+| Backup and sharing | `backup`, `restore`, `collections` |
+| Configuration and health | `model`, `auth`, `setup`, `doctor` |
+| Application | `version`, `update`, `completions` |
+
+Use `docfoo <command> --help` for options. Add `--json` for application/script integration; human summaries are not a parsing API. Keep backup files private and outside the data being backed up. Close desktop/library writers before restore.
+
+**New in v0.2.1:** grouped help, local read-only `doctor` checks, secure `auth --key-stdin`, consistent diagnostics, safer backup/restore/collection replacement and stricter flag/path validation. Action-flag syntax, the `docfoo.cli/1` envelope and existing scan model aliases are retained. Upgrade older versions before using the new options. JSON/non-interactive restore requires `--yes`, and replacing an installed graph collection requires `--force`. On Windows, self-update stages `.exe.new` files; stop both processes and replace the matching binary pair to finish installation.
 
 ## Privacy and release policy
 
