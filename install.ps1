@@ -1,7 +1,7 @@
 # install.ps1 - download, verify and install docfoo for Windows x64.
 #
 #   irm https://raw.githubusercontent.com/abhikuriyal-pixel/docfoo-cli/main/install.ps1 | iex
-#   powershell -ExecutionPolicy Bypass -File install.ps1 [-Version 0.2.2] [-Prefix DIR] [-SkipSetup]
+#   powershell -ExecutionPolicy Bypass -File install.ps1 [-Version 0.1.0] [-Prefix DIR] [-SkipSetup]
 #
 # The script is a bootstrap only: it downloads the latest release archive,
 # verifies its SHA-256, extracts it under -Prefix, adds that directory to the

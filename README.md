@@ -31,7 +31,7 @@ Invoke-WebRequest https://raw.githubusercontent.com/abhikuriyal-pixel/docfoo-cli
 
 ### Linux / WSL x64
 
-Use a release that actually includes `docfoo-cli-<version>-linux-x64.tar.gz` and its `.sha256` sidecar; some historical versions are Windows-only. Linux x64 is verified on Ubuntu 22.04; compatibility with every Linux distribution is not guaranteed. macOS/ARM builds are not offered.
+Download `docfoo-cli-<version>-linux-x64.tar.gz` and its `.sha256` sidecar. Linux x64 releases are built and verified on Ubuntu 22.04 (glibc 2.35); compatibility with every Linux distribution is not guaranteed. macOS/ARM builds are not offered.
 
 ```bash
 sha256sum -c docfoo-cli-<version>-linux-x64.tar.gz.sha256
@@ -52,7 +52,7 @@ All default branches are `main`. Old raw `/master/install.*` URLs are no longer 
 
 ```bash
 docfoo version --json
-docfoo doctor              # available in v0.2.1 and newer
+docfoo doctor
 docfoo setup
 docfoo auth --set PROVIDER
 docfoo model --list
@@ -79,16 +79,19 @@ Configure suitable scanning/answering models using `docfoo model --set SLOT prov
 
 Use `docfoo <command> --help` for options. Add `--json` for application/script integration; human summaries are not a parsing API. Keep backup files private and outside the data being backed up. Close desktop/library writers before restore.
 
-**New in v0.2.2:** request-scoped `--decision-provider`, `--decision-model` and `--no-decision-routing` options for KG queries. `kg --status` advertises `kg.decision-model/1` for integrations. Overrides leave workspace settings unchanged; the answering model and optional routing model remain separate.
+### Included in v0.1.0
 
-**New in v0.2.1:** grouped help, local read-only `doctor` checks, secure `auth --key-stdin`, consistent diagnostics, safer backup/restore/collection replacement and stricter flag/path validation. Action-flag syntax, the `docfoo.cli/1` envelope and existing scan model aliases are retained. Upgrade older versions before using the new options. JSON/non-interactive restore requires `--yes`, and replacing an installed graph collection requires `--force`. On Windows, self-update stages `.exe.new` files; stop both processes and replace the matching binary pair to finish installation.
+- A matching Pi 1.1.0 model sidecar, with all transitive Pi packages pinned to the same version. Azure uses provider ID `azure` and the `AZURE_OPENAI_*` environment variables.
+- Request-scoped `--decision-provider`, `--decision-model` and `--no-decision-routing` options for KG queries. `kg --status` advertises `kg.decision-model/1`. Overrides leave workspace settings unchanged; answering and optional routing models remain separate.
+- Grouped help, read-only `doctor` checks, secure `auth --key-stdin`, consistent diagnostics, guarded backup/restore/collection replacement and strict flag/path validation.
+- The `docfoo.cli/1` JSON envelope. JSON/non-interactive restore requires `--yes`; replacing an installed graph collection requires `--force`. Windows self-update stages `.exe.new` files; stop both processes and replace the matching binary pair to finish installation.
 
 ## Privacy and release policy
 
 The library is local, but configured model providers receive document/query content and may charge for usage. Authentication files and document libraries must be treated as sensitive. Do not post credentials, private documents, answers or workspace backups in public issues.
 
-Archives and SHA-256 sidecars are immutable by policy; migrated versions retain their original bytes and notes. GitHub's automatic **Source code** archives contain documentation and bootstraps, not CLI implementation. `DOCFOO_REPO` can point installers/updaters at a compatible release mirror.
+The public app release series was reset to v0.1.0 at the maintainer's request; earlier app releases were removed. The separate `deps-v1` setup-model release is retained. Going forward, archives and SHA-256 sidecars are immutable by policy. GitHub's automatic **Source code** archives contain documentation and bootstraps, not CLI implementation. `DOCFOO_REPO` can point installers/updaters at a compatible release mirror.
 
 ## License and support
 
-[MIT License](LICENSE). Third-party native libraries/models and bundled dependencies retain their own licenses. Historical artifacts are not rebuilt to add new files. See [SUPPORT.md](SUPPORT.md) and [SECURITY.md](SECURITY.md).
+[MIT License](LICENSE). Third-party native libraries/models and bundled dependencies retain their own licenses. See [SUPPORT.md](SUPPORT.md) and [SECURITY.md](SECURITY.md).
