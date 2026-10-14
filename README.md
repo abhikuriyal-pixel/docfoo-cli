@@ -79,6 +79,8 @@ Configure suitable scanning/answering models using `docfoo model --set SLOT prov
 
 Use `docfoo <command> --help` for options. Add `--json` for application/script integration; human summaries are not a parsing API. Keep backup files private and outside the data being backed up. Close desktop/library writers before restore.
 
+**New in v0.2.2:** request-scoped `--decision-provider`, `--decision-model` and `--no-decision-routing` options for KG queries. `kg --status` advertises `kg.decision-model/1` for integrations. Overrides leave workspace settings unchanged; the answering model and optional routing model remain separate.
+
 **New in v0.2.1:** grouped help, local read-only `doctor` checks, secure `auth --key-stdin`, consistent diagnostics, safer backup/restore/collection replacement and stricter flag/path validation. Action-flag syntax, the `docfoo.cli/1` envelope and existing scan model aliases are retained. Upgrade older versions before using the new options. JSON/non-interactive restore requires `--yes`, and replacing an installed graph collection requires `--force`. On Windows, self-update stages `.exe.new` files; stop both processes and replace the matching binary pair to finish installation.
 
 ## Privacy and release policy
