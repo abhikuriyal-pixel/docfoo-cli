@@ -2,96 +2,68 @@
 
 **From documents to grounded answers — in your terminal or application.**
 
-DocFoo CLI scans PDFs/images into a local Markdown library, builds scoped knowledge graphs and answers questions with citations and figures. Scriptable commands and structured JSON support application and agent integrations, including Hermes/Slack.
+DocFoo CLI scans PDFs and images into a local Markdown library, builds knowledge graphs, and answers questions with citations and figures.
 
-[Download releases](https://github.com/abhikuriyal-pixel/docfoo-cli/releases) · [Report a problem](https://github.com/abhikuriyal-pixel/docfoo-cli/issues) · [Support](SUPPORT.md)
+[Download](https://github.com/abhikuriyal-pixel/docfoo-cli/releases) · [Report an issue](https://github.com/abhikuriyal-pixel/docfoo-cli/issues) · [Support](SUPPORT.md)
 
-> **Repository scope**
-> This repository currently hosts documentation, installer bootstraps and binary releases. Rust/sidecar implementation and ongoing development history are maintained privately; no source-publication date is committed. Previously published MIT source retains its existing license rights.
+## Features
+
+- PDF and image scanning with text, tables, and figures.
+- Knowledge-graph indexing and queries scoped to a collection or the whole library.
+- Answers with citations, figures, and graph-replay snapshots.
+- Resource, note, collection, backup, and restore commands.
+- Model configuration, credential management, and local health checks.
+- Structured JSON output, shell completions, and application integrations.
 
 ## Install
 
-Downloads require no GitHub login. Archives contain both `docfoo` and the matching `docfoo-agent` model sidecar; keep them together.
+Download the archive and checksum for your platform from [Releases](https://github.com/abhikuriyal-pixel/docfoo-cli/releases):
 
-### Windows x64
+| Platform | Archive |
+| --- | --- |
+| Windows x64 | `docfoo-cli-0.1.0-windows-x64.zip` |
+| Linux / WSL x64 | `docfoo-cli-0.1.0-linux-x64.tar.gz` |
 
-Download `docfoo-cli-<version>-windows-x64.zip` and its `.sha256` sidecar from the selected [release](https://github.com/abhikuriyal-pixel/docfoo-cli/releases). Verify before extracting:
+Keep `docfoo` and `docfoo-agent` together. Windows executables are unsigned. Linux requires glibc 2.34 or newer, including Ubuntu 22.04. macOS and ARM packages are not available.
+
+Verify the download using its `.sha256` file. On Windows:
 
 ```powershell
-Get-FileHash .\docfoo-cli-<version>-windows-x64.zip -Algorithm SHA256
+Get-FileHash .\docfoo-cli-0.1.0-windows-x64.zip -Algorithm SHA256
 ```
 
-Compare with the `.sha256` file, extract the folder and run `docfoo.exe version`. Alternatively, review and download [install.ps1](install.ps1), then execute it in PowerShell; it verifies the archive, installs to `%USERPROFILE%\.docfoo\bin`, adds that directory to user PATH and provisions scan dependencies. Executables are unsigned.
-
-```powershell
-Invoke-WebRequest https://raw.githubusercontent.com/abhikuriyal-pixel/docfoo-cli/main/install.ps1 -OutFile install.ps1
-# Review the script before running it.
-.\install.ps1
-```
-
-### Linux / WSL x64
-
-Download `docfoo-cli-<version>-linux-x64.tar.gz` and its `.sha256` sidecar. Linux x64 releases are built and verified on Ubuntu 22.04 (glibc 2.35); compatibility with every Linux distribution is not guaranteed. macOS/ARM builds are not offered.
+On Linux:
 
 ```bash
-sha256sum -c docfoo-cli-<version>-linux-x64.tar.gz.sha256
-tar -xzf docfoo-cli-<version>-linux-x64.tar.gz
+sha256sum -c docfoo-cli-0.1.0-linux-x64.tar.gz.sha256
+tar -xzf docfoo-cli-0.1.0-linux-x64.tar.gz
 ```
 
-For an installer, review [install.sh](install.sh), then explicitly select a release with Linux assets:
+The [Windows](install.ps1) and [Linux](install.sh) installers can install the binaries and set up scanning dependencies.
+
+## Getting started
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/abhikuriyal-pixel/docfoo-cli/main/install.sh -o install.sh
-# Review before executing; replace <version> with an available Linux release.
-bash install.sh --version <version>
-```
-
-All default branches are `main`. Old raw `/master/install.*` URLs are no longer supported.
-
-## Quick start
-
-```bash
-docfoo version --json
+docfoo version
 docfoo doctor
 docfoo setup
 docfoo auth --set PROVIDER
 docfoo model --list
-# Replace these placeholders with available catalog keys:
 docfoo model --set scan provider/vision-model
 docfoo model --set kg provider/answer-model
 docfoo scan paper.pdf --output papers
 docfoo kg --index --scope papers
-docfoo kg --query "Summarize the key findings" --scope papers --json
-docfoo update --check
+docfoo kg --query "Summarize the key findings" --scope papers
 ```
 
-Configure suitable scanning/answering models using `docfoo model --set SLOT provider/model`; use `docfoo help` for options. Default workspace: `~/.docfoo` (`%USERPROFILE%\.docfoo` on Windows). `docfoo setup` downloads pinned, checksummed ONNX Runtime, PDFium and the layout model. The public `deps-v1` model asset is a setup dependency, not the latest CLI version.
+Replace the provider and model placeholders with available catalogue entries. `docfoo setup` downloads the scanning dependencies. The default workspace is `~/.docfoo` (`%USERPROFILE%\.docfoo` on Windows).
 
-## Workflows and help
+Run `docfoo <command> --help` for options. Add `--json` for scripts and application integrations. Check for updates with `docfoo update --check`.
 
-| Task | Commands |
-| --- | --- |
-| Document library | `scan`, `resources`, `notes` |
-| Knowledge retrieval | `kg --index`, `kg --query`, `kg --status` |
-| Backup and sharing | `backup`, `restore`, `collections` |
-| Configuration and health | `model`, `auth`, `setup`, `doctor` |
-| Application | `version`, `update`, `completions` |
+## Privacy
 
-Use `docfoo <command> --help` for options. Add `--json` for application/script integration; human summaries are not a parsing API. Keep backup files private and outside the data being backed up. Close desktop/library writers before restore.
+The document library is local, but configured model providers receive document and query content and may charge for usage. Keep credentials, document libraries, and backup archives private. Do not include them in issue reports.
 
-### Included in v0.1.0
+## License
 
-- A matching Pi 1.1.0 model sidecar, with all transitive Pi packages pinned to the same version. Azure uses provider ID `azure` and the `AZURE_OPENAI_*` environment variables.
-- Request-scoped `--decision-provider`, `--decision-model` and `--no-decision-routing` options for KG queries. `kg --status` advertises `kg.decision-model/1`. Overrides leave workspace settings unchanged; answering and optional routing models remain separate.
-- Grouped help, read-only `doctor` checks, secure `auth --key-stdin`, consistent diagnostics, guarded backup/restore/collection replacement and strict flag/path validation.
-- The `docfoo.cli/1` JSON envelope. JSON/non-interactive restore requires `--yes`; replacing an installed graph collection requires `--force`. Windows self-update stages `.exe.new` files; stop both processes and replace the matching binary pair to finish installation.
-
-## Privacy and release policy
-
-The library is local, but configured model providers receive document/query content and may charge for usage. Authentication files and document libraries must be treated as sensitive. Do not post credentials, private documents, answers or workspace backups in public issues.
-
-The public app release series was reset to v0.1.0 at the maintainer's request; earlier app releases were removed. The separate `deps-v1` setup-model release is retained. Going forward, archives and SHA-256 sidecars are immutable by policy. GitHub's automatic **Source code** archives contain documentation and bootstraps, not CLI implementation. `DOCFOO_REPO` can point installers/updaters at a compatible release mirror.
-
-## License and support
-
-[MIT License](LICENSE). Third-party native libraries/models and bundled dependencies retain their own licenses. See [SUPPORT.md](SUPPORT.md) and [SECURITY.md](SECURITY.md).
+[MIT](LICENSE). Bundled third-party components retain their respective licenses. See [SECURITY.md](SECURITY.md) for vulnerability reporting.

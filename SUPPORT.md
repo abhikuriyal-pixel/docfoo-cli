@@ -1,13 +1,11 @@
 # Support
 
-Use [GitHub Issues](https://github.com/abhikuriyal-pixel/docfoo-cli/issues) for bugs and feature requests.
+Report bugs and feature requests in [GitHub Issues](https://github.com/abhikuriyal-pixel/docfoo-cli/issues).
 
-Include `docfoo version --json`, OS/architecture, selected archive, command flags, expected/actual results and a minimal non-sensitive reproduction. Remove workspace paths, credentials, queries and private source/answer content from logs. Never upload `.agent/auth.json` or your document library.
+For a bug report, include the DocFoo version, operating system, command and options, steps to reproduce the issue, and expected and actual behavior.
 
-Keep `docfoo` and `docfoo-agent` from the same archive. Verify the `.sha256` sidecar before installation. Use the Windows x64 or Linux x64 archive for your platform. Linux releases are built and verified on Ubuntu 22.04. `deps-v1` is a pinned model dependency, not an application update.
+Remove credentials, private documents, query content, and account details from logs before sharing them. Model-provider authentication or billing issues may require contacting the provider.
 
-Provider authentication/billing errors may require provider support. Vulnerability reports use the private channel in [SECURITY.md](SECURITY.md).
+If a download's checksum does not match its `.sha256` file, do not run it. Report the archive name and checksum.
 
-## Download integrity
-
-If a checksum differs, do not run or install the download. Report the release version, asset filename and expected/actual SHA-256 values in an issue; do not attach credentials or private documents. Releases are published after maintainer review, and versioned asset bytes are not silently replaced.
+Report security vulnerabilities privately using [SECURITY.md](SECURITY.md).
