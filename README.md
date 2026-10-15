@@ -1,69 +1,68 @@
 # DocFoo CLI
 
-**From documents to grounded answers — in your terminal or application.**
+Scan PDFs and images into a local Markdown library, then ask questions with citations back to your documents.
 
-DocFoo CLI scans PDFs and images into a local Markdown library, builds knowledge graphs, and answers questions with citations and figures.
+DocFoo extracts text, tables, and figures, organizes documents into collections, and builds knowledge graphs for searching across them. You can also browse your library, read notes, and make or restore backups from the terminal. Commands support JSON output for scripts and other applications.
 
-[Download](https://github.com/abhikuriyal-pixel/docfoo-cli/releases) · [Report an issue](https://github.com/abhikuriyal-pixel/docfoo-cli/issues) · [Support](SUPPORT.md)
-
-## Features
-
-- PDF and image scanning with text, tables, and figures.
-- Knowledge-graph indexing and queries scoped to a collection or the whole library.
-- Answers with citations, figures, and graph-replay snapshots.
-- Resource, note, collection, backup, and restore commands.
-- Model configuration, credential management, and local health checks.
-- Structured JSON output, shell completions, and application integrations.
+[Download](https://github.com/abhikuriyal-pixel/docfoo-cli/releases/latest) · [Report an issue](https://github.com/abhikuriyal-pixel/docfoo-cli/issues)
 
 ## Install
 
-Download the archive and checksum for your platform from [Releases](https://github.com/abhikuriyal-pixel/docfoo-cli/releases):
+Download and extract the archive for your platform:
 
-| Platform | Archive |
+| Platform | Download |
 | --- | --- |
-| Windows x64 | `docfoo-cli-0.1.0-windows-x64.zip` |
-| Linux / WSL x64 | `docfoo-cli-0.1.0-linux-x64.tar.gz` |
+| Windows x64 | [docfoo-cli-0.1.0-windows-x64.zip](https://github.com/abhikuriyal-pixel/docfoo-cli/releases/download/v0.1.0/docfoo-cli-0.1.0-windows-x64.zip) |
+| Linux / WSL x64 | [docfoo-cli-0.1.0-linux-x64.tar.gz](https://github.com/abhikuriyal-pixel/docfoo-cli/releases/download/v0.1.0/docfoo-cli-0.1.0-linux-x64.tar.gz) |
 
-Keep `docfoo` and `docfoo-agent` together. Windows executables are unsigned. Linux requires glibc 2.34 or newer, including Ubuntu 22.04. macOS and ARM packages are not available.
+Keep `docfoo` and `docfoo-agent` in the same folder and add it to your PATH. Linux requires glibc 2.34 or newer; Ubuntu 22.04 is supported. Windows downloads are not code-signed yet.
 
-Verify the download using its `.sha256` file. On Windows:
+You can also use the [Windows](https://github.com/abhikuriyal-pixel/docfoo-cli/blob/main/install.ps1) or [Linux](https://github.com/abhikuriyal-pixel/docfoo-cli/blob/main/install.sh) installer to download DocFoo and set up scanning dependencies.
+
+### Check your download
+
+Each archive has a `.sha256` file on the [release page](https://github.com/abhikuriyal-pixel/docfoo-cli/releases/latest). On Windows, compare its contents with:
 
 ```powershell
 Get-FileHash .\docfoo-cli-0.1.0-windows-x64.zip -Algorithm SHA256
 ```
 
-On Linux:
+On Linux, download both files to the same folder and run:
 
 ```bash
 sha256sum -c docfoo-cli-0.1.0-linux-x64.tar.gz.sha256
-tar -xzf docfoo-cli-0.1.0-linux-x64.tar.gz
 ```
 
-The [Windows](install.ps1) and [Linux](install.sh) installers can install the binaries and set up scanning dependencies.
+## Get started
 
-## Getting started
+Set up scanning, add your provider's API key, and choose models from `docfoo model --list`:
 
 ```bash
-docfoo version
-docfoo doctor
 docfoo setup
 docfoo auth --set PROVIDER
 docfoo model --list
 docfoo model --set scan provider/vision-model
 docfoo model --set kg provider/answer-model
-docfoo scan paper.pdf --output papers
-docfoo kg --index --scope papers
-docfoo kg --query "Summarize the key findings" --scope papers
 ```
 
-Replace the provider and model placeholders with available catalogue entries. `docfoo setup` downloads the scanning dependencies. The default workspace is `~/.docfoo` (`%USERPROFILE%\.docfoo` on Windows).
+Replace `PROVIDER` and the model names with entries from the list. Then scan a document, index it, and ask a question:
 
-Run `docfoo <command> --help` for options. Add `--json` for scripts and application integrations. Check for updates with `docfoo update --check`.
+```bash
+docfoo scan paper.pdf --output papers
+docfoo kg --index --scope papers
+docfoo kg --query "What are the key findings?" --scope papers
+```
 
-## Privacy
+Your library lives in `~/.docfoo` (`%USERPROFILE%\.docfoo` on Windows). Use `--workspace DIR` to choose another folder.
 
-The document library is local, but configured model providers receive document and query content and may charge for usage. Keep credentials, document libraries, and backup archives private. Do not include them in issue reports.
+Run `docfoo --help` to see the commands, or `docfoo <command> --help` for options. `docfoo doctor` checks your setup, and `docfoo update --check` checks for updates. Add `--json` when using DocFoo in a script.
+
+## Your data
+
+Your library stays on your computer. Scanning, indexing, and questions send content to the model providers you configure, and their usage charges apply. Backups contain your documents and chats, so keep them private.
+
+For help, see [Support](SUPPORT.md). To report a vulnerability, see [Security](SECURITY.md).
 
 ## License
 
-[MIT](LICENSE). Bundled third-party components retain their respective licenses. See [SECURITY.md](SECURITY.md) for vulnerability reporting.
+[MIT](LICENSE). Third-party components keep their own licenses.

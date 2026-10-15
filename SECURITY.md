@@ -1,11 +1,7 @@
 # Security
 
-Do not disclose vulnerabilities, API keys, private documents, auth files or workspace backups in public issues.
+Please [report vulnerabilities privately](https://github.com/abhikuriyal-pixel/docfoo-cli/security/advisories/new) so we can investigate before the details are public.
 
-Report suspected vulnerabilities privately using **Security → Advisories → Report a vulnerability**:
+Include your DocFoo version, operating system, what happened, and steps to reproduce it. Remove API keys and private document content from any examples or logs.
 
-https://github.com/abhikuriyal-pixel/docfoo-cli/security/advisories/new
-
-Include version, operating system, minimal reproduction and impact, with sensitive data removed. If the form is unavailable, request a private contact channel in an issue without exposing vulnerability details.
-
-Use the latest compatible stable release. These early-stage releases have no guaranteed support lifetime or response-time SLA. SHA-256 files detect corruption, not publisher identity; Windows binaries are unsigned. Native dependencies and models retain their upstream security and license policies.
+For bugs and general questions, use [GitHub Issues](https://github.com/abhikuriyal-pixel/docfoo-cli/issues).

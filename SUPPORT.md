@@ -1,11 +1,9 @@
 # Support
 
-Report bugs and feature requests in [GitHub Issues](https://github.com/abhikuriyal-pixel/docfoo-cli/issues).
+Found a bug or have a feature request? [Open an issue](https://github.com/abhikuriyal-pixel/docfoo-cli/issues).
 
-For a bug report, include the DocFoo version, operating system, command and options, steps to reproduce the issue, and expected and actual behavior.
+For bugs, include your DocFoo version (`docfoo version`), operating system, the command you ran, and what you expected to happen. Steps to reproduce the problem and a short error log help too. Leave out API keys and private document content.
 
-Remove credentials, private documents, query content, and account details from logs before sharing them. Model-provider authentication or billing issues may require contacting the provider.
+If a download's checksum doesn't match, download it again before running it. If it still doesn't match, report the archive name and the checksum you received.
 
-If a download's checksum does not match its `.sha256` file, do not run it. Report the archive name and checksum.
-
-Report security vulnerabilities privately using [SECURITY.md](SECURITY.md).
+Please [report security vulnerabilities privately](SECURITY.md), not in a public issue.
