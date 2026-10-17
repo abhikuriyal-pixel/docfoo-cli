@@ -1,0 +1,3 @@
+Most competitive neural sequence transduction models have an encoder-decoder structure \[5, 2, 29\]. Here, the encoder maps an input sequence of symbol representations \\((x\_1, ..., x\_n)\\) to a sequence of continuous representations \\(z = (z\_1, ..., z\_n)\\). Given \\(z\\), the decoder then generates an output sequence \\((y\_1, ..., y\_m)\\) of symbols one element at a time. At each step the model is auto-regressive \[9\], consuming the previously generated symbols as additional input when generating the next.
+
+The Transformer follows this overall architecture using stacked self-attention and point-wise, fully connected layers for both the encoder and decoder, shown in the left and right halves of Figure 1, respectively.

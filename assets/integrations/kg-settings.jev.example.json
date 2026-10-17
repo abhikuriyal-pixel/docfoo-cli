@@ -1,0 +1,9 @@
+{
+  "query": {
+    "evidenceBudgetUnlimited": false,
+    "evidenceCharBudget": 18000,
+    "enableConceptRouting": true,
+    "conceptProvider": "openrouter",
+    "conceptModel": "typesafe/jev-1.13"
+  }
+}

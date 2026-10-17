@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" shape-rendering="geometricPrecision" role="img" aria-labelledby="docfoo-genie-title docfoo-genie-description">
+  <title id="docfoo-genie-title">DocFoo: Laughing Fold, Genie</title>
+  <desc id="docfoo-genie-description">The original laughing mask and rising hook, floating above a restrained, tapered wisp in the same color that curls beneath the chin.</desc>
+  <path fill="currentColor" d="
+    M128 275
+    C84 291 64 324 89 353
+    C116 385 164 400 216 409
+    C166 390 121 371 104 345
+    C87 321 99 294 128 275 Z
+
+    M355 376
+    C404 369 439 386 429 407
+    C417 431 333 445 294 461
+    C271 471 273 484 294 485
+    C307 486 313 477 299 473
+    C320 468 333 484 318 495
+    C306 505 280 501 268 491
+    C246 472 267 454 301 441
+    C335 428 391 421 411 405
+    C431 389 392 378 355 376 Z
+  "/>
+  <path fill="currentColor" fill-rule="evenodd" d="
+    M112 112
+    C176 146 312 152 384 120
+    C408 105 424 84 429 66
+    C434 48 427 40 418 44
+    C410 48 410 60 417 68
+    C396 66 387 44 401 29
+    C417 13 443 22 449 42
+    C459 76 432 115 400 136
+    C407 210 396 286 369 334
+    C345 377 304 411 256 438
+    C208 411 167 377 143 334
+    C115 284 104 207 112 112 Z
+
+    M150 264
+    C158 214 219 200 242 245
+    C212 232 178 249 150 264 Z
+
+    M362 264
+    C354 214 293 200 270 245
+    C300 232 334 249 362 264 Z
+
+    M168 318
+    C214 349 298 349 344 318
+    C322 397 190 397 168 318 Z
+  "/>
+</svg>

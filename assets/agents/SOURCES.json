@@ -1,0 +1,27 @@
+{
+  "pi.svg": {
+    "name": "Pi",
+    "source": "https://pi.dev/logo-auto.svg",
+    "reference": "https://github.com/earendil-works/pi",
+    "sha256": "abd66e7868b2d24f0f0895f9237ee8a6dcb22337583b0dc54aeb595acecb4d6b"
+  },
+  "opencode.svg": {
+    "name": "OpenCode",
+    "source": "https://opencode.ai/_build/assets/index-jRm0cJio.js",
+    "reference": "https://opencode.ai/brand",
+    "note": "Decoded official logoDarkSquareSvg download; geometry/colors unchanged.",
+    "sha256": "c3ba0e84ed064d5ae444ef11b4fcf21096125ec72dde76ba58b93bcd6bc52404"
+  },
+  "codex.png": {
+    "name": "Codex",
+    "source": "https://openai.gallerycdn.vsassets.io/extensions/openai/chatgpt/26.51007.21434/1791508178385/Microsoft.VisualStudio.Services.Icons.Default",
+    "reference": "https://marketplace.visualstudio.com/items?itemName=openai.chatgpt",
+    "sha256": "2ce1c57dd3b312417106a487815ab1235bddce17e1fa9b32a2f048bd71ee25d3"
+  },
+  "claude-code.png": {
+    "name": "Claude Code",
+    "source": "https://anthropic.gallerycdn.vsassets.io/extensions/anthropic/claude-code/2.1.301/1792092236961/Microsoft.VisualStudio.Services.Icons.Default",
+    "reference": "https://marketplace.visualstudio.com/items?itemName=anthropic.claude-code",
+    "sha256": "7241633e5a39b44a947c7b9a821637f30d6e86716e7a8c847136d91f9c3f6ba1"
+  }
+}

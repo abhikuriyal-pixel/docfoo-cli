@@ -1,0 +1,25 @@
+{
+  "providers": {
+    "local": {
+      "name": "Local llama.cpp",
+      "api": "openai-completions",
+      "baseUrl": "http://127.0.0.1:8080/v1",
+      "apiKey": "local",
+      "compat": {
+        "supportsDeveloperRole": false,
+        "supportsReasoningEffort": false,
+        "maxTokensField": "max_tokens"
+      },
+      "models": [
+        {
+          "id": "unsloth/Qwen3.5-4B-GGUF:Q4_K_M",
+          "name": "Qwen3.5 4B",
+          "reasoning": false,
+          "input": ["text"],
+          "contextWindow": 16128,
+          "maxTokens": 2048
+        }
+      ]
+    }
+  }
+}

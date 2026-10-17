@@ -1,0 +1,58 @@
+{
+  "Papers/flash-attention/assets/figure_1_p02_01.jpg": {
+    "path": "./assets/evidence/Papers/flash-attention/assets/figure_1_p02_01.jpg",
+    "sha256": "8f7ce1ae6faf22d5dfb7271ecf95e39235c3976dc8b28ea1a3b16571cc5956ef",
+    "size": [
+      1036,
+      396
+    ],
+    "title": "FlashAttention \u00b7 Figure 1",
+    "alt": "GPU memory hierarchy, tiled attention and attention runtime.",
+    "credit": "Dao et al., 2022",
+    "source": "Papers/flash-attention/content.md",
+    "start": 17,
+    "end": 31
+  },
+  "Papers/attention-is-all-you-need/assets/table_1_p06_01.jpg": {
+    "path": "./assets/evidence/Papers/attention-is-all-you-need/assets/table_1_p06_01.jpg",
+    "sha256": "b1eb5b92941ae632cf783aa9924639002e74eaa58dd2eaa48a7399b8b0f37f7c",
+    "size": [
+      976,
+      197
+    ],
+    "title": "Attention Is All You Need \u00b7 Table 1",
+    "alt": "Complexity, sequential operations and maximum path length for attention, recurrent and convolutional layers.",
+    "credit": "Vaswani et al., 2017",
+    "source": "Papers/attention-is-all-you-need/content.md",
+    "start": 141,
+    "end": 159
+  },
+  "Papers/longformer/assets/figure_4_p03_04.jpg": {
+    "path": "./assets/evidence/Papers/longformer/assets/figure_4_p03_04.jpg",
+    "sha256": "70264df563df9fc35a6b5e7c29a9c0d8e1ee1a7b143ea9554ff37ce5165db8f3",
+    "size": [
+      175,
+      171
+    ],
+    "title": "Longformer \u00b7 Figure 2(b)",
+    "alt": "Sliding-window attention pattern.",
+    "credit": "Beltagy et al., 2020",
+    "source": "Papers/longformer/content.md",
+    "start": 51,
+    "end": 83
+  },
+  "Papers/longformer/assets/figure_6_p03_06.jpg": {
+    "path": "./assets/evidence/Papers/longformer/assets/figure_6_p03_06.jpg",
+    "sha256": "3567611396cbf33142aa1ff33764309394c34ec5b0dc01e7a9589ac4b19609da",
+    "size": [
+      173,
+      170
+    ],
+    "title": "Longformer \u00b7 Figure 2(d)",
+    "alt": "Global and sliding-window attention pattern.",
+    "credit": "Beltagy et al., 2020",
+    "source": "Papers/longformer/content.md",
+    "start": 51,
+    "end": 83
+  }
+}

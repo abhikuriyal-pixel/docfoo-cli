@@ -1,0 +1,7 @@
+{
+  "query": {
+    "evidenceBudgetUnlimited": false,
+    "evidenceCharBudget": 18000,
+    "enableConceptRouting": false
+  }
+}
