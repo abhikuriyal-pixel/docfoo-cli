@@ -1,0 +1,9 @@
+We demonstrate a natural task which can be solved by the full attention mechanism in \\(O(1)\\)-layers. However, under standard complexity theoretic assumptions, this problem requires \\(\\tilde\{\\Omega\}(n)\\)-layers for any sparse attention layers with \\(\\tilde\{O\}(n)\\) edges (not just BiGBiRD). (Here \\(\\tilde\{O\}\\) hides poly-logarithmic factors). Consider the simple problem of finding the corresponding furthest vector for each vector in the given sequence of length \\(n\\). Formally,
+
+Task 1. Given \\(n\\) unit vectors \\(\\\{u\_1,\\ldots,u\_n\\\}\\), find \\(f(u\_1,\\ldots,u\_n)\\to(u\_\{1\_\*\},\\ldots,u\_\{n\_\*\})\\) where for a fixed \\(j\\in\[n\]\\), we define \\(j^\*=\\arg\\max\_k\\\|u\_k-u\_j\\\|\_2^2\\).
+
+Finding vectors that are furthest apart boils down to minimize inner product search in case of unit vectors. For a full-attention mechanism with appropriate query and keys, this task is very easy as we can evaluate all pair-wise inner products.
+
+The impossibility for sparse-attention follows from hardness results stemming from Orthogonal Vector Conjecture(OVC) \[1, 2, 7, 96\]. The OVC is a widely used assumption in fine-grained complexity. Informally, it states that one cannot determine if the minimum inner product among \\(n\\) boolean vectors is 0 in subquadratic time. In App. C, we show a reduction using OVC to show that if a transformer \\(g \\in \\mathcal\{T\}\_\{D\}^\{H=1,m=2,d=2,q=0\}\\) for any sparse directed graph \\(D\\) can evaluate the Task 1, it can solve the orthogonal vector problem.
+
+Proposition 1. There exists a single layer full self-attention \\(g \\in \\mathcal\{T\}^\{H=1,m=2d,q=0\}\\) that can evaluate Task 1, i.e. \\(g(u\_1,\\ldots,u\_n) = \[u\_1^\*,\\ldots,u\_\{n^\*\}\]\\), but for any sparse-attention graph \\(D\\) with \\(\\tilde\{O\}(n)\\) edges (i.e. inner product evaluations), would require \\(\\Omega(n^\{1-o(1)\})\\) layers. We give a formal proof of this fact in App. C.

@@ -1,0 +1,3 @@
+Dilated Sliding Window To further increase the receptive field without increasing computation, the sliding window can be “dilated”. This is analogous to dilated CNNs (van den Oord et al., 2016) where the window has gaps of size dilation \\(d\\) (Fig. 2c). Assuming a fixed \\(d\\) and \\(w\\) for all layers, the recep- tive field is \\(\\ell \\times d \\times w\\), which can reach tens of thousands of tokens even for small values of \\(d\\).
+
+In multi-headed attention, each attention head computes a different attention score. We found set- tings with different dilation configurations per head improves performance by allowing some heads without dilation to focus on local context, while others with dilation focus on longer context.

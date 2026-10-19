@@ -69,6 +69,102 @@
     updateFog();
   }
 
+  // Architecture is a complete static diagram first. Motion runs once, only
+  // while visible, and never advances under a reduced-motion preference.
+  const architecture = $('.architecture-graphic');
+  if (architecture) {
+    const steps = $$('[data-architecture-step]', architecture);
+    const progress = $$('.architecture-progress span', architecture);
+    const controls = $('.architecture-controls', architecture);
+    const playback = $('.architecture-playback', architecture);
+    const toggle = $('[data-architecture-toggle]', architecture);
+    const replay = $('[data-architecture-replay]', architecture);
+    const reduced = matchMedia('(prefers-reduced-motion: reduce)');
+    const durations = [1800, 2400, 2400, 2000, 3000, 2800, 2800];
+    let index = 0;
+    let requested = true;
+    let finished = false;
+    let inView = !('IntersectionObserver' in window);
+    let remaining = durations[0];
+    let timer = null;
+    let started = 0;
+
+    function stopClock() {
+      if (timer === null) return;
+      clearTimeout(timer);
+      timer = null;
+      remaining = Math.max(0, remaining - (performance.now() - started));
+    }
+    function showStep() {
+      steps.forEach((step, position) => {
+        step.classList.toggle('is-current', !reduced.matches && position === index);
+        step.classList.toggle('is-complete', !reduced.matches && (finished || position < index));
+      });
+      progress.forEach((segment, position) => {
+        segment.classList.toggle('is-current', position === index);
+        segment.classList.toggle('is-complete', finished || position < index);
+      });
+      $('.architecture-step-label', architecture).textContent = `${String(index + 1).padStart(2, '0')} / 07 · ${$('h4', steps[index]).textContent}`;
+      $('#architecture-caption').textContent = steps[index].dataset.caption;
+    }
+    function syncMotion() {
+      const motion = !reduced.matches;
+      controls.hidden = !motion;
+      playback.hidden = !motion;
+      architecture.toggleAttribute('data-motion-ready', motion);
+      const running = motion && requested && !finished && inView && !document.hidden;
+      if (!running) stopClock();
+      architecture.dataset.architectureState = !motion ? 'static' : finished ? 'complete' : running ? 'playing' : 'paused';
+      toggle.textContent = requested && !finished ? 'Pause' : 'Play';
+      toggle.setAttribute('aria-label', `${requested && !finished ? 'Pause' : 'Play'} architecture animation`);
+      if (running && timer === null) {
+        started = performance.now();
+        timer = setTimeout(() => {
+          timer = null;
+          if (index === steps.length - 1) {
+            finished = true;
+            requested = false;
+          } else {
+            index += 1;
+            remaining = durations[index];
+          }
+          showStep();
+          syncMotion();
+        }, Math.max(20, remaining));
+      }
+    }
+    function restart() {
+      stopClock();
+      index = 0;
+      remaining = durations[0];
+      finished = false;
+      requested = true;
+      showStep();
+      syncMotion();
+    }
+    toggle.addEventListener('click', () => {
+      if (finished) { restart(); return; }
+      requested = !requested;
+      syncMotion();
+    });
+    replay.addEventListener('click', restart);
+    reduced.addEventListener('change', () => {
+      stopClock();
+      showStep();
+      syncMotion();
+    });
+    document.addEventListener('visibilitychange', syncMotion);
+    if ('IntersectionObserver' in window) {
+      const observer = new IntersectionObserver(entries => {
+        inView = entries[0].isIntersecting;
+        syncMotion();
+      }, { threshold: .08 });
+      observer.observe(architecture);
+    }
+    showStep();
+    syncMotion();
+  }
+
   // Only the recorded-query area is tabbed. Product sections remain normal sections.
   const explorer = $('.query-explorer');
   const queryTabs = $$('.query-tabs [data-query]');

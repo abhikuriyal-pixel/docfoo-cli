@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-label="PiKins">
+  <title>PiKins / Berth</title>
+  <desc>Three distinct, faceless persistent teammates with a subtly taller sage central lead, above a solid rectangular foundation. A name-independent mark on a charcoal app tile.</desc>
+  <rect x="8" y="8" width="240" height="240" rx="54" fill="#1B211E"/>
+  <g transform="translate(-42.666667 -32) scale(1.333333333)" fill="#F0F2EB">
+    <path d="M52 84L64 72H80L92 84V144H80V124H64V144H52Z"/>
+    <path d="M108 64L120 52H148V144H136V120H120V144H108Z" fill="#A6C8B6"/>
+    <path d="M164 72H192L204 84V144H188V124H176V144H164Z"/>
+    <rect x="44" y="156" width="168" height="32"/>
+  </g>
+</svg>

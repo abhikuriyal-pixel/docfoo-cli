@@ -1,0 +1,1 @@
+1\. BIGBIRD satisfies all the known theoretical properties of full transformer (Sec. 3). In particular, we show that adding extra tokens allows one to express all continuous sequence to sequence functions with only \\(O(n)\\)-inner products. Furthermore, we show that under standard assumptions regarding precision, BIGBIRD is Turing complete.

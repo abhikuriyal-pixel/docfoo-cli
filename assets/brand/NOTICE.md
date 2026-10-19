@@ -1,3 +1,48 @@
+# GitHub artwork
+
+`github-mark.svg` is the unchanged official `mark-github-24.svg` from GitHub’s
+Primer Octicons repository. It appears before the GitHub label in both repository
+buttons. A CSS mask makes the mark follow the button text color in either theme;
+its geometry is unchanged.
+
+Source: https://github.com/primer/octicons/blob/main/icons/mark-github-24.svg
+
+SHA-256: `bce494189797623c34e39a41c2c38a132bdca23ce4e6ac06b70116ed7e91ce26`
+
+Copyright (c) 2026 GitHub Inc. MIT license: `OCTICONS-LICENSE.txt`.
+GitHub trademark rights remain with GitHub; inclusion does not imply endorsement.
+The asset is served locally with no external runtime dependency.
+
+# Hermes artwork
+
+`hermes-girl.png` is an unchanged copy of the official Hermes Agent website
+logo, `website/static/img/logo.png`, from Nous Research’s `hermes-agent`
+repository at revision `d177b119e9c56c9ddc0b7379ffce52341ec06584`. It is the
+black-and-white girl artwork, not the separate pixel-art Hermes mascot.
+The same original image is used in both themes, with no recoloring or redraw.
+
+Source: https://github.com/NousResearch/hermes-agent/blob/d177b119e9c56c9ddc0b7379ffce52341ec06584/website/static/img/logo.png
+
+SHA-256: `2eaff911b9da9b1f1fcc81adb02f4992bb9ea6b781f4dd048cd79349927ddb7a`
+
+Copyright (c) 2025 Nous Research. Repository MIT license: `HERMES-LICENSE.txt`.
+Hermes names and artwork belong to their respective owners; inclusion does
+not imply endorsement. The logo is served locally, with no runtime dependency
+on the Hermes installation or its website.
+
+# PiKins artwork
+
+`pikins.svg` is an unchanged copy of PiKins’ official `build/icon.svg`, also used
+as `assets/brand/icon.svg` on its landing page. The same fixed-color charcoal,
+pale and sage artwork is used in both themes.
+
+Source: https://github.com/abhikuriyal-pixel/PiKins/blob/main/build/icon.svg
+
+SHA-256: `c8da71d9f095d8d9ae497805b21f5f6fe74cb23bcf4734a243a3397a10918712`
+
+Copyright (c) 2026 abhikuriyal-pixel. MIT license: `PIKINS-LICENSE.txt`.
+The public site serves its own copy; no sibling checkout is needed at runtime.
+
 # DocFoo artwork
 
 Landing-page favicon: `docfoo-white.svg` uses the adopted Genie geometry below,
