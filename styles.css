@@ -66,11 +66,11 @@
 }
 :root {
   color-scheme: light;
-  --canvas: #fff; --surface: #f7f9fb; --raised: #eef4fa;
-  --border: #e3e9ed; --border-strong: #d8e1e8;
-  --ink: #000; --muted: #526776;
-  --link: #0076df; --link-hover: #0059ab;
-  --control: #0076df; --control-ink: #fff; --focus: #0076df;
+  --canvas: #fff; --surface: #f7f7f7; --raised: #eee;
+  --border: #e3e3e3; --border-strong: #d8d8d8;
+  --ink: #000; --muted: #666;
+  --link: #333; --link-hover: #000; --inline-link-decoration: underline;
+  --control: #333; --control-ink: #fff; --focus: #333;
   /* 1060px outer page with the reference's 30px side padding. */
   --gutter: 30px; --measure: 1000px;
   font-family: Lato, Arial, sans-serif;
@@ -714,7 +714,7 @@ dialog::backdrop { background: rgb(0 0 0 / .64); }
   *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
 }
 @media print {
-  :root, :root[data-theme] { --canvas: white; --surface: #f4f4f4; --raised: #eee; --ink: #000; --muted: #333; --border: #ccc; --border-strong: #999; --link: #0076df; --link-hover: #0059ab; --control: #0076df; --control-ink: white; --focus: #0076df; color-scheme: light; }
+  :root, :root[data-theme] { --canvas: white; --surface: #f4f4f4; --raised: #eee; --ink: #000; --muted: #333; --border: #ccc; --border-strong: #999; --link: #333; --link-hover: #000; --control: #333; --control-ink: white; --focus: #333; color-scheme: light; }
   .site-header, .theme-control, .menu-toggle, .copy-button, .query-tabs, .architecture-controls, .architecture-playback, dialog { display: none !important; }
   .wrap { width: 100%; }
   .hero, .section { padding-block: 24px; }
