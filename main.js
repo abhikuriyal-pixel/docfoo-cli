@@ -13,7 +13,7 @@
   function setTheme(theme) {
     root.dataset.theme = theme;
     $$('button[data-theme]', themes).forEach(button => button.setAttribute('aria-pressed', String(button.dataset.theme === theme)));
-    $('meta[name="theme-color"]').content = theme === 'dark' ? '#080a09' : '#dadfdb';
+    $('meta[name="theme-color"]').content = theme === 'dark' ? '#161616' : '#ffffff';
   }
   themes.hidden = false;
   setTheme(root.dataset.theme);
