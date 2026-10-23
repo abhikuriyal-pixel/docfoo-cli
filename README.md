@@ -12,8 +12,8 @@ Download and extract the archive for your platform:
 
 | Platform | Download |
 | --- | --- |
-| Windows x64 | [docfoo-cli-0.1.1-windows-x64.zip](https://github.com/abhikuriyal-pixel/docfoo-cli/releases/download/v0.1.1/docfoo-cli-0.1.1-windows-x64.zip) |
-| Linux / WSL x64 | [docfoo-cli-0.1.1-linux-x64.tar.gz](https://github.com/abhikuriyal-pixel/docfoo-cli/releases/download/v0.1.1/docfoo-cli-0.1.1-linux-x64.tar.gz) |
+| Windows x64 | [docfoo-cli-0.1.2-windows-x64.zip](https://github.com/abhikuriyal-pixel/docfoo-cli/releases/download/v0.1.2/docfoo-cli-0.1.2-windows-x64.zip) |
+| Linux / WSL x64 | [docfoo-cli-0.1.2-linux-x64.tar.gz](https://github.com/abhikuriyal-pixel/docfoo-cli/releases/download/v0.1.2/docfoo-cli-0.1.2-linux-x64.tar.gz) |
 
 Keep `docfoo` and `docfoo-agent` in the same folder and add it to your PATH. Linux requires glibc 2.34 or newer; Ubuntu 22.04 is supported. Windows downloads are not code-signed yet.
 
@@ -24,13 +24,13 @@ You can also use the [Windows](https://github.com/abhikuriyal-pixel/docfoo-cli/b
 Each archive has a `.sha256` file on the [release page](https://github.com/abhikuriyal-pixel/docfoo-cli/releases/latest). On Windows, compare its contents with:
 
 ```powershell
-Get-FileHash .\docfoo-cli-0.1.1-windows-x64.zip -Algorithm SHA256
+Get-FileHash .\docfoo-cli-0.1.2-windows-x64.zip -Algorithm SHA256
 ```
 
 On Linux, download both files to the same folder and run:
 
 ```bash
-sha256sum -c docfoo-cli-0.1.1-linux-x64.tar.gz.sha256
+sha256sum -c docfoo-cli-0.1.2-linux-x64.tar.gz.sha256
 ```
 
 ## Get started
@@ -62,6 +62,29 @@ docfoo kg --query "What are the key findings?" --scope papers
 Your library lives in `~/.docfoo` (`%USERPROFILE%\.docfoo` on Windows). Use `--workspace DIR` to choose another folder.
 
 Run `docfoo --help` to see the commands, or `docfoo <command> --help` for options. `docfoo doctor` checks your setup, and `docfoo update --check` checks for updates. Add `--json` when using DocFoo in a script.
+
+## OCR without layout detection
+
+```bash
+docfoo scan paper.pdf --no-layout --parallel 4
+```
+
+`--no-layout` sends each complete page to the text OCR model without loading the
+layout model or ONNX Runtime. `--parallel` controls concurrent pages in this mode
+(regions otherwise); `--jobs` still controls concurrent documents. Markdown stays
+in page order. PDFs need only PDFium; images need no native scanning dependencies.
+`docfoo setup` and `setup --check` still provision/check the full layout-aware set.
+
+This mode does not extract figure/table crops or run separate asset analysis.
+`--figure-model` and `--analysis-prompt` cannot be combined with it. A successful
+empty OCR reply preserves the scanned page as an image. Rerun with the same source,
+output destination and layout mode to resume; switching modes uses a separate
+checkpoint folder instead of mixing outputs.
+
+**Review the OCR output.** In a live test, the model transcribed a dense table's
+caption but omitted its data rows. Completing every page does not guarantee a
+complete transcription. Use the default layout-aware mode when figure/table crops
+and their analysis are important.
 
 ## Browser login and separate accounts
 
