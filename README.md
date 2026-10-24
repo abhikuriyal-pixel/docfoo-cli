@@ -12,8 +12,8 @@ Download and extract the archive for your platform:
 
 | Platform | Download |
 | --- | --- |
-| Windows x64 | [docfoo-cli-0.1.2-windows-x64.zip](https://github.com/abhikuriyal-pixel/docfoo-cli/releases/download/v0.1.2/docfoo-cli-0.1.2-windows-x64.zip) |
-| Linux / WSL x64 | [docfoo-cli-0.1.2-linux-x64.tar.gz](https://github.com/abhikuriyal-pixel/docfoo-cli/releases/download/v0.1.2/docfoo-cli-0.1.2-linux-x64.tar.gz) |
+| Windows x64 | [docfoo-cli-0.1.3-windows-x64.zip](https://github.com/abhikuriyal-pixel/docfoo-cli/releases/download/v0.1.3/docfoo-cli-0.1.3-windows-x64.zip) |
+| Linux / WSL x64 | [docfoo-cli-0.1.3-linux-x64.tar.gz](https://github.com/abhikuriyal-pixel/docfoo-cli/releases/download/v0.1.3/docfoo-cli-0.1.3-linux-x64.tar.gz) |
 
 Keep `docfoo` and `docfoo-agent` in the same folder and add it to your PATH. Linux requires glibc 2.34 or newer; Ubuntu 22.04 is supported. Windows downloads are not code-signed yet.
 
@@ -24,13 +24,13 @@ You can also use the [Windows](https://github.com/abhikuriyal-pixel/docfoo-cli/b
 Each archive has a `.sha256` file on the [release page](https://github.com/abhikuriyal-pixel/docfoo-cli/releases/latest). On Windows, compare its contents with:
 
 ```powershell
-Get-FileHash .\docfoo-cli-0.1.2-windows-x64.zip -Algorithm SHA256
+Get-FileHash .\docfoo-cli-0.1.3-windows-x64.zip -Algorithm SHA256
 ```
 
 On Linux, download both files to the same folder and run:
 
 ```bash
-sha256sum -c docfoo-cli-0.1.2-linux-x64.tar.gz.sha256
+sha256sum -c docfoo-cli-0.1.3-linux-x64.tar.gz.sha256
 ```
 
 ## Get started
@@ -85,6 +85,19 @@ checkpoint folder instead of mixing outputs.
 caption but omitted its data rows. Completing every page does not guarantee a
 complete transcription. Use the default layout-aware mode when figure/table crops
 and their analysis are important.
+
+## Failed scan pages and retry
+
+If rendering, OCR or figure/table analysis fails on a page, DocFoo saves the
+failure and continues with later pages. Markdown keeps page order with explicit
+incomplete-page markers. Token-limited responses are failures, not completed OCR
+or image fallbacks. Cancellation and output/checkpoint write errors still stop
+the scan; an incomplete document does not start queued documents.
+
+Human output lists pages to retry. JSON includes `partial`, `failedPages` and
+`failures` (page numbers and reasons); `pages` counts successfully completed pages.
+Rerun the same source, output destination and layout mode to retry unfinished
+work while reusing successful pages, regions and asset descriptions.
 
 ## Browser login and separate accounts
 
